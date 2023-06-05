@@ -2,7 +2,7 @@
 `nohup node ~/Hexo-app/blog/source/md_editor/app.js  &`
 
 ### 2、启动前端Hexo
-`cd ~/Hexo-app`
+`cd ~/Hexo-app/blog`
 
 `hexo s`
 
