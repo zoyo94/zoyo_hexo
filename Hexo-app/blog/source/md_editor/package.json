@@ -1,53 +1,39 @@
 {
-  "name": "editor.md",
-  "version": "1.5.0",
-  "description": "Open source online markdown editor.",
-  "directories": {
-    "doc": "docs",
-    "example": "examples",
-    "test": "tests"
-  },
+  "name": "md-editor-optimized",
+  "version": "2.0.0",
+  "description": "优化版 MD Editor - 集成到 Hexo 博客系统",
+  "main": "app-optimized.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node app.js",
+    "dev": "node start-services.js",
+    "stop": "lsof -ti:3001 | xargs kill -9"
+  },
+  "keywords": [
+    "markdown",
+    "editor",
+    "hexo",
+    "blog",
+    "chinese",
+    "file-upload"
+  ],
+  "author": "ZOYO",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "multer": "^1.4.5-lts.1",
+    "tar": "^6.1.15",
+    "winston": "^3.10.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/pandao/editor.md.git"
+    "url": "."
   },
-  "keywords": [
-    "editor.md",
-    "markdown",
-    "editor"
-  ],
-  "author": "Pandao",
-  "license": "MIT",
   "bugs": {
-    "url": "https://github.com/pandao/editor.md/issues"
+    "url": "."
   },
-  "homepage": "https://github.com/pandao/editor.md",
-  "devDependencies": {
-    "dateformatter": "^0.1.0",
-    "gulp": "^3.8.11",
-    "gulp-concat": "^2.4.2",
-    "gulp-header": "^1.2.2",
-    "gulp-jshint": "^1.9.0",
-    "gulp-minify-css": "^0.4.4",
-    "gulp-notify": "^2.1.0",
-    "gulp-rename": "^1.2.0",
-    "gulp-replace": "^0.5.3",
-    "gulp-ruby-sass": "^1.0.1",
-    "gulp-uglifyjs": "^0.6.1",
-    "gulp-util": "^3.0.1"
-  },
-  "dependencies": {
-    "cors": "^2.8.5",
-    "crypto": "^1.0.1",
-    "express": "^4.18.2",
-    "fs": "^0.0.1-security",
-    "multer": "^1.4.5-lts.1",
-    "node-cache": "^5.1.2",
-    "path": "^0.12.7",
-    "tar": "^6.1.15",
-    "winston": "^3.17.0"
-  }
+  "homepage": "."
 }

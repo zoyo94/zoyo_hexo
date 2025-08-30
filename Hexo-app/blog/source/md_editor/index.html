@@ -1,4 +1,15 @@
-<!DOCTYPE html><html lang="zh"><head><title>MD Editor</title><meta charset="utf-8"><base href="./"><link rel="shortcut icon" href="../../favicon.ico" type="image/x-icon"><link rel="stylesheet" href="./css/editormd.min.css"><link rel="stylesheet" href="./css/font-awesome/all.min.css"><style>html, body {
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <title>MD Editor</title>
+    <meta charset="utf-8"/>
+    <base href="./">
+    <link rel="shortcut icon" href="../../favicon.ico" type="image/x-icon" />
+    <link rel="stylesheet" href="./css/editormd.min.css"/>
+    <link rel="stylesheet" href="./css/font-awesome/all.min.css">
+
+    <style>
+        html, body {
             width: 100%;
             height: 100%;
             margin: 0;
@@ -6,6 +17,84 @@
         }
 
         .editormd { box-sizing: border-box; }
+
+        /* 提高 CodeMirror 搜索框的 z-index 和样式 */
+        .CodeMirror-dialog {
+            z-index: 10000 !important;
+            background-color: #3a3534 !important;
+            color: #ddd !important;
+            padding: 1em !important;
+            border-radius: 8px !important;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5) !important;
+            position: absolute !important;
+            top: 55px !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            width: 80% !important;
+            max-width: 400px !important;
+            border: 1px solid #555;
+        }
+
+        .CodeMirror-dialog input[type="text"] {
+            width: calc(100% - 20px) !important;
+            padding: 8px !important;
+            background-color: #2c2827 !important;
+            border: 1px solid #555 !important;
+            color: #eee !important;
+            border-radius: 4px !important;
+        }
+        
+        /* Custom Search Dialog */
+        .custom-search-dialog {
+            display: none; /* Initially hidden */
+            position: absolute;
+            top: 55px;
+            right: 20px;
+            z-index: 10000;
+            background: #3a3534;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            border: 1px solid #555;
+            width: 300px;
+        }
+        .custom-search-dialog h3 {
+            margin-top: 0;
+            color: #ff6f61;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        .custom-search-dialog input {
+            width: calc(100% - 16px);
+            padding: 8px;
+            margin-bottom: 10px;
+            background: #2c2827;
+            border: 1px solid #555;
+            color: white;
+            border-radius: 4px;
+        }
+        .custom-search-dialog button {
+            background: linear-gradient(135deg, #ff6f61, #ff9f1c);
+            border: none;
+            padding: 8px 12px;
+            margin: 2px;
+            border-radius: 4px;
+            color: #ffffff;
+            font-size: 12px;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .custom-search-dialog button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 5px rgba(255, 111, 97, 0.5);
+        }
+        #custom-search-status {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #ffc107;
+            height: 15px;
+        }
 
         input[type="file"] { display: none; }
 
@@ -27,30 +116,200 @@
 
         select {
             appearance: none;
-            background: #3a3534 url('data:image/svg+xml;utf8,<svg fill="%23ffffff" height="20" viewBox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>') no-repeat right 8px center;
-            background-size: 10px;
+            background: linear-gradient(135deg, #4a4540 0%, #3a3534 100%);
+            background-image: url('data:image/svg+xml;utf8,<svg fill="%23ffffff" height="16" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 12px;
             color: #ffffff;
-            border: 1px solid #555;
-            border-radius: 8px;
-            padding: 6px 25px 6px 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 8px 35px 8px 15px;
             font-size: 13px;
             font-family: 'Arial', sans-serif;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            font-weight: 500;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3), 
+                        0 2px 8px rgba(0, 0, 0, 0.2),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
             cursor: pointer;
-            width: 150px;
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
-            margin-left: 5px;
+            width: 160px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-left: 8px;
+            backdrop-filter: blur(10px);
+            position: relative;
         }
 
         select:hover {
-            border-color: #888;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 111, 97, 0.6);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), 
+                        0 3px 12px rgba(255, 111, 97, 0.2),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
+            background: linear-gradient(135deg, #5a5045 0%, #4a4540 100%);
         }
 
         select:focus {
             outline: none;
             border-color: #ff6f61;
-            box-shadow: 0 0 5px rgba(255, 111, 97, 0.5);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 
+                        0 0 0 3px rgba(255, 111, 97, 0.3),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+            background: linear-gradient(135deg, #5a5045 0%, #4a4540 100%);
+        }
+
+        select:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 下拉选项样式 */
+        select option {
+            background: #3a3534;
+            color: #ffffff;
+            padding: 8px 15px;
+            border: none;
+            font-size: 13px;
+        }
+
+        select option:hover {
+            background: linear-gradient(135deg, #ff6f61, #ff9f1c);
+            color: #ffffff;
+        }
+
+        /* 统一科技感文件选择器 */
+        .tech-file-selector {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            margin: 0 8px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 20px;
+            padding: 8px 16px;
+            color: #00ffff;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.1),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            width: 120px; /* 固定宽度确保对齐 */
+            justify-content: flex-start; /* 左对齐内容 */
+            height: 18px; /* 固定高度确保对齐 */
+        }
+
+        .tech-file-selector::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .tech-file-selector:hover::before {
+            left: 100%;
+        }
+
+        .tech-file-selector:hover {
+            border-color: rgba(0, 255, 255, 0.6);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .tech-file-selector .selector-icon {
+            margin-right: 8px;
+            font-size: 14px;
+            animation: pulse 2s infinite;
+            width: 16px; /* 固定宽度确保图标对齐 */
+            text-align: center;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .tech-file-selector .selector-text {
+            position: relative;
+            z-index: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 80px; /* 限制文本宽度 */
+        }
+
+        /* 保留旧的选择器样式类以兼容性，但使用与tech-file-selector相同的样式 */
+        .tech-file-selector-v2 {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            margin: 0 8px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 20px;
+            padding: 8px 16px;
+            color: #00ffff;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.1),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            width: 120px;
+            justify-content: flex-start;
+            height: 18px;
+        }
+
+        .tech-file-selector-v2::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .tech-file-selector-v2:hover::before {
+            left: 100%;
+        }
+
+        .tech-file-selector-v2:hover {
+            border-color: rgba(0, 255, 255, 0.6);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .tech-file-selector-v2 .selector-icon {
+            margin-right: 8px;
+            font-size: 14px;
+            animation: pulse 2s infinite;
+            width: 16px;
+            text-align: center;
+        }
+
+        .tech-file-selector-v2 .selector-text {
+            position: relative;
+            z-index: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 80px;
+        }
+
+        select option:checked {
+            background: linear-gradient(135deg, #ff6f61, #ff9f1c);
+            color: #ffffff;
+            font-weight: 600;
         }
 
         .editormd .editormd-toolbar form label {
@@ -142,13 +401,1394 @@
             background: #3a3534;
             padding: 2px 6px;
             border-radius: 4px;
-        }</style></head><body><div id="editor"><textarea id="myTextArea" style="display:none;"></textarea></div><div id="generic-modal-overlay" class="modal-overlay"></div><div id="generic-modal" class="modal"><p id="modal-message"></p><div id="modal-content"></div></div><script src="./examples/js/jquery.min.js"></script><script src="./editormd.js"></script><script src="./css/moment.min.js"></script><script type="text/javascript">let CONFIG={HOST:window.location.hostname,DEFAULT_IMG_DIR:"IMG",ORIGINAL_DIR:"./",DEFAULT_AUTOSAVE_INTERVAL:3600,PORTS:{UPLOAD:3001,SERVE:4e3}},mdEditor=editormd("editor",{width:"100%",height:"100%",syncScrolling:"single",path:"lib/",theme:"dark",previewTheme:"dark",editorTheme:"paraiso-dark",toolbarAutoFixed:!1,saveHTMLToTextarea:!0,autoFocus:!1,searchReplace:!0,watch:!0,htmlDecode:!0,toolbar:!0,codeFold:!0,placeholder:"请输入内容...",tocm:!0,tocTitle:"目录",taskList:!0,toolbarIcons:function(){return[...editormd.toolbarModes.full.filter(e=>!["fullscreen","image","emoji"].includes(e)),"|","load_md","hand_save","create_folder","input_img","hand_export","time","<br>","md_file","img_directory","img_file"]},toolbarCustomIcons:{load_md:'<input type="file" id="my_file" accept=".md" multiple webkitdirectory directory><li><a href="#" onclick="loadMdFile()" title="Upload MD file or folder"><i class="fa fa-upload"></i></a></li>',input_img:'<form id="up-img-form" enctype="multipart/form-data"><input type="file" name="image" id="image" multiple></form><li><a href="#" onclick="inputImg();return false;" title="Upload images"><i class="fas fa fa-images" style="color: #777777;"></i></a></li>',md_file:'<form id="md-file-form" class="dropdown-group"><label for="md-select" title="Currently being edited MD files/正在编辑的Md文件">MD:</label><select id="md-select" name="file"><option value="" selected>选择要读取的MD文件</option></select></form>',img_directory:'<form id="img-directory-form" class="dropdown-group"><label for="directory-select" title="An MD folder with the same name is used for storing images/同名MD文件夹用来存放图片">文件夹:</label><select name="destination" id="directory-select" onchange="imgDirectorySelect()"><option value="" selected>选择存放图片的文件夹</option></select></form>',img_file:'<form id="img-file-form" class="dropdown-group"><label for="img-select" title="Show all images in the folder/文件夹下的所有图片">图片:</label><select id="img-select" name="file"><option value="" selected>选择要植入的图片</option></select></form>',hand_save:'<li><a href="#" onclick="handSave()" title="Save file"><i class="fas fa fa-save" style="color: #777777;"></i></a></li><button style="display: none;" id="hand-save">Save current editor content</button>',hand_export:'<li><a href="#" onclick="handExport()" title="Compressed export"><i class="fas fa fa-download" style="color: #777777;"></i></a></li><button style="display: none;" id="hand-export">Compressed export</button>',time:'<li><a href="#" title="Set autosave interval" onclick="setAutoSaveInterval();return false;"><i class="fas fa-history" style="color: #777777;"></i></a><span id="autosave-countdown" style="margin-left: 5px; color: #ffffff; font-size: 12px;"></span></li>',create_folder:'<li><a href="#" title="Create folder" onclick="createFolderPrompt();return false;"><i class="fas fa-folder-plus" style="color: #777777;"></i></a></li>'},lang:{toolbar:{load_md:"Upload file",input_img:"Upload image",img_directory:"Image storage location",md_file:"Show MD files in directory",hand_save:"Manually save editor content",hand_export:"Compressed export",time:"Autosave interval",create_folder:"Create folder corresponding to MD file"}}}),state={currentFilename:"cache",destination:"",autoSaveIntervalId:null,autoSaveIntervalSeconds:CONFIG.DEFAULT_AUTOSAVE_INTERVAL,remainingSeconds:CONFIG.DEFAULT_AUTOSAVE_INTERVAL,canceledFolders:new Set(JSON.parse(localStorage.getItem("canceledFolders")||"[]"))},DOM={},fetchJson=async(e,t={})=>{e=await fetch(e,t);if(e.ok)return e.json();throw new Error("HTTP error! Status: "+e.status)};function showModal(e,t=""){var a=document.getElementById("generic-modal"),o=document.getElementById("generic-modal-overlay");return document.getElementById("modal-message").textContent=e,document.getElementById("modal-content").innerHTML=t,a.style.display="block",o.style.display="block",a.classList.add("show"),{modal:a,overlay:o}}function hideModal(e,t){e.style.display="none",t.style.display="none",e.classList.remove("show")}function loadMdFile(){let{modal:e,overlay:t}=showModal("请选择上传类型 / Please select upload type:",'<button id="upload-md-btn">MD文件 / MD File</button><button id="upload-folder-btn">文件夹 / Folder</button>');var a=document.getElementById("upload-md-btn"),o=document.getElementById("upload-folder-btn");a.onclick=()=>{DOM.fileInput.setAttribute("accept",".md"),DOM.fileInput.removeAttribute("webkitdirectory"),DOM.fileInput.setAttribute("multiple",""),DOM.fileInput.click(),hideModal(e,t)},o.onclick=()=>{DOM.fileInput.removeAttribute("accept"),DOM.fileInput.setAttribute("webkitdirectory",""),DOM.fileInput.removeAttribute("multiple"),DOM.fileInput.click(),hideModal(e,t)},t.onclick=()=>hideModal(e,t)}function inputImg(){DOM.imgInput.click()}function handSave(){DOM.handSaveBtn.click()}function handExport(){DOM.handExportBtn.click()}async function saveContent(t,e,a,o=!1){if(!a&&!o)return!1;var n=new FormData;n.append("destination",e),n.append("filename",t||"cache"),n.append("currentContent",a||"");try{var l=await fetchJson(`http://${CONFIG.HOST}:${CONFIG.PORTS.UPLOAD}/save_md`,{method:"POST",body:n});return console.log(`${t} saved ${l.success?"successfully":"failed"}!`),o&&(state.remainingSeconds=state.autoSaveIntervalSeconds,updateCountdown(),DOM.autosaveCountdown.textContent="已保存",setTimeout(updateCountdown,1e3)),l.success}catch(e){return console.error(`Failed to save ${t}:`,e),!1}}function autoSave(){saveContent(state.currentFilename,CONFIG.ORIGINAL_DIR,mdEditor.getMarkdown(),!0)}async function getContent(a,e=null){if(null!==e)setTimeout(()=>{mdEditor.cm.setValue(e)},500);else{let t=new XMLHttpRequest;t.open("GET",""+CONFIG.ORIGINAL_DIR+a,!0),t.onreadystatechange=function(){if(4===t.readyState&&200===t.status){let e=t.responseText;"cache"!==a||e&&""!==e.trim()||(e=`---
-title: ${a}
-date: ${moment().format("YYYY-MM-DD HH:mm:ss")}
-categories:
-    - [Category / 分类]
-tags:
-    - Tag / 标签
----`),setTimeout(()=>{mdEditor.cm.setValue(e)},500)}},t.send()}}function updateCountdown(){var e,t;DOM.autosaveCountdown&&(0===state.autoSaveIntervalSeconds?DOM.autosaveCountdown.textContent="自动保存已关闭":(e=Math.floor(state.remainingSeconds/60),t=state.remainingSeconds%60,DOM.autosaveCountdown.textContent=`剩余 ${e}:`+(t<10?"0":"")+t,0<state.remainingSeconds?state.remainingSeconds--:state.remainingSeconds=state.autoSaveIntervalSeconds))}function setAutoSaveInterval(){var e=parseInt(prompt("Enter autosave interval (seconds):",state.autoSaveIntervalSeconds));isNaN(e)||(0<e&&e!==state.autoSaveIntervalSeconds?(state.autoSaveIntervalSeconds=e,state.remainingSeconds=e,state.autoSaveIntervalId&&clearInterval(state.autoSaveIntervalId),state.autoSaveIntervalId=setInterval(autoSave,1e3*e)):0===e&&(state.autoSaveIntervalSeconds=0,state.remainingSeconds=0,state.autoSaveIntervalId&&clearInterval(state.autoSaveIntervalId),state.autoSaveIntervalId=null),updateCountdown())}async function createAndSyncFolder(t,e){if(!t||Array.from(DOM.directorySelect.options).some(e=>e.value===t))return t&&alert("Folder name already exists!"),null;var a=new FormData;a.append("folderName",t),a.append("folderPath",e);try{var o,n=await fetchJson(`http://${CONFIG.HOST}:${CONFIG.PORTS.UPLOAD}/create_folder`,{method:"POST",body:a});return n.success?(console.log("Folder created successfully!"),addOptionToSelect(DOM.directorySelect,t),o=""+e+t+"/",state.destination=o,DOM.directorySelect.value=t,await fetchDirectoryTree(o,DOM.imgSelect,"file","Failed to get IMG files"),o):(console.error("Folder creation failed:",n.message),null)}catch(e){return console.error("Folder creation failed:",e),null}}function createFolderPrompt(){var e=prompt("Enter folder name:");e&&createAndSyncFolder(e,CONFIG.ORIGINAL_DIR)}async function uploadFiles(e,t,a={}){let o=new FormData;e.forEach(e=>o.append(a.key||"file",e)),Object.entries(a.extraData||{}).forEach(([e,t])=>o.append(e,t));try{var n=await fetchJson(`http://${CONFIG.HOST}:`+CONFIG.PORTS.UPLOAD+t,{method:"POST",body:o});return console.log("Upload successful:",n),n}catch(e){throw console.error("Upload failed:",e),e}}async function handleFileUpload(){var n=Array.from(DOM.fileInput.files);if(n.length){if(1<n.length||n[0].webkitRelativePath.includes("/")){let e=null,t=[];for(var l of n){var i=l.webkitRelativePath.split("/");2===i.length&&l.name.endsWith(".md")?(e=l,i[0]):2<i.length&&t.push(l)}if(!e)return alert("No MD file found in folder"),void(DOM.fileInput.value=null);let a=await uploadFiles([e],"/upload",{key:"md_file"});state.currentFilename=a.filename;var r=new FileReader,r=(r.onload=function(e){getContent(a.filename,e.target.result)},r.readAsText(e),Array.from(DOM.mdSelect.options).find(e=>e.value===a.filename));r?DOM.mdSelect.value=a.filename:addOptionToSelect(DOM.mdSelect,a.filename);let o=a.filename.split(".")[0];0<t.length&&(r=await uploadFiles(t,"/upload-folder",{key:"files",extraData:{folderName:o}}),console.log("Folder uploaded successfully:",r)),state.destination=""+CONFIG.ORIGINAL_DIR+o+"/",Array.from(DOM.directorySelect.options).find(e=>e.value===o)||addOptionToSelect(DOM.directorySelect,o),DOM.directorySelect.value=o,await fetchDirectoryTree(state.destination,DOM.imgSelect,"file","Failed to get IMG files")}else{r=n[0];if(!r.name.endsWith(".md"))return alert("Please select an MD file"),void(DOM.fileInput.value=null);let t=r.name;n=Array.from(DOM.mdSelect.options).find(e=>e.value===t);if(n&&!confirm(`"${t}" already exists, replace it?`))return void(DOM.fileInput.value=null);let a=await uploadFiles([r],"/upload",{key:"md_file"});state.currentFilename=a.filename;var e=new FileReader;e.onload=function(e){getContent(a.filename,e.target.result)},e.readAsText(r),n?DOM.mdSelect.value=a.filename:addOptionToSelect(DOM.mdSelect,a.filename)}DOM.fileInput.value=null}}async function handleImageUpload(){var t=Array.from(DOM.imgInput.files);if(t.length){state.destination=DOM.directorySelect.value?""+CONFIG.ORIGINAL_DIR+DOM.directorySelect.value+"/":""+CONFIG.ORIGINAL_DIR+CONFIG.DEFAULT_IMG_DIR+"/";var e,a=[];for(e of t)try{(await fetch(""+state.destination+e.name)).ok&&!confirm(`"${e.name}" already exists, replace it?`)||a.push(e)}catch{a.push(e)}if(a.length){var{modal:t,overlay:l}=showModal("正在上传图片，请稍候...",'<div class="progress-circle"></div>');try{let o=await uploadFiles(a,"/upimg",{key:"image",extraData:{destination:state.destination}}),n="";o.imagePaths.forEach((e,t)=>{var a=o.filenames[t].split(".")[0];n+=`
-![${a}](${state.destination}${o.filenames[t]})`}),await fetchDirectoryTree(state.destination,DOM.imgSelect,"file","Failed to get IMG files");let e=mdEditor.getMarkdown()+n;setTimeout(()=>{mdEditor.cm.setValue(e),mdEditor.cm.refresh()},1e3),hideModal(t,l)}catch(e){console.error("Image upload failed:",e),alert("图片上传失败！"),hideModal(t,l)}}DOM.imgInput.value=null}}async function handleMdSelectChange(){var e=DOM.mdSelect.value;if(e!==state.currentFilename){await autoSave(),await getContent(state.currentFilename=e);let t=e.split(".")[0];Array.from(DOM.directorySelect.options).find(e=>e.value===t)||"cache"===t?(state.destination="cache"===t?""+CONFIG.ORIGINAL_DIR+CONFIG.DEFAULT_IMG_DIR+"/":""+CONFIG.ORIGINAL_DIR+t+"/",DOM.directorySelect.value="cache"===t?CONFIG.DEFAULT_IMG_DIR:t,await fetchDirectoryTree(state.destination,DOM.imgSelect,"file","Failed to get IMG files")):state.canceledFolders.has(t)||(confirm("Create a folder with the same name?\n(No images, no need to create)")?await createAndSyncFolder(t,CONFIG.ORIGINAL_DIR):(state.canceledFolders.add(t),localStorage.setItem("canceledFolders",JSON.stringify([...state.canceledFolders]))))}}async function handleImgSelectChange(){var e=DOM.imgSelect.value,t=(state.destination=DOM.directorySelect.value?""+CONFIG.ORIGINAL_DIR+DOM.directorySelect.value+"/":""+CONFIG.ORIGINAL_DIR+CONFIG.DEFAULT_IMG_DIR+"/",e.split(".")[0]);let a=`
-![${t}](${state.destination}${e})`;setTimeout(()=>mdEditor.appendMarkdown(a),500)}async function handleManualSave(){let a=state.currentFilename;if(!a||"cache"===a){if(!(a=prompt("Enter file name","Untitled")))return;a+=".md"}var e=mdEditor.getMarkdown();if(await saveContent(a,CONFIG.ORIGINAL_DIR,e)){0<state.autoSaveIntervalSeconds&&(state.remainingSeconds=state.autoSaveIntervalSeconds,updateCountdown(),DOM.autosaveCountdown.textContent="已保存",setTimeout(updateCountdown,1e3)),"cache"===state.currentFilename&&await saveContent("cache",CONFIG.ORIGINAL_DIR,""),Array.from(DOM.mdSelect.options).find(e=>e.value===a)||addOptionToSelect(DOM.mdSelect,a),state.currentFilename=a;let t=(DOM.mdSelect.value=a).split(".")[0];Array.from(DOM.directorySelect.options).find(e=>e.value===t)?DOM.directorySelect.value!==t&&(DOM.directorySelect.value=t,await moveImagesToFolder(mdEditor,e,t,CONFIG.ORIGINAL_DIR),setTimeout(autoSave,1e3),await fetchDirectoryTree(""+CONFIG.ORIGINAL_DIR+t+"/",DOM.imgSelect,"file","Failed to get IMG files")):confirm("Create a folder with the same name?\n(No images, no need to create)")&&await createAndSyncFolder(t,CONFIG.ORIGINAL_DIR)&&(await moveImagesToFolder(mdEditor,e,t,CONFIG.ORIGINAL_DIR),setTimeout(autoSave,500))}}async function handleExport(){var a=DOM.mdSelect.value||"cache",o=DOM.directorySelect.value||"IMG",n=mdEditor.getMarkdown(),l="cache"===a&&"IMG"===o?a:"cache"!==a&&"IMG"===o?a.replace(".md",""):o;let{modal:i,overlay:r}=showModal("正在压缩文件，请稍候...",'<div class="progress-circle"></div><p id="progress-text">0%</p>');var d=document.getElementById("progress-text");try{var c=new FormData,s=(c.append("directoryName",o||l),c.append("selectedFile",a),c.append("original_dir",CONFIG.ORIGINAL_DIR),c.append("markdownContent",n),await fetch(`http://${CONFIG.HOST}:${CONFIG.PORTS.UPLOAD}/tgz_download`,{method:"POST",body:c}));if(!s.ok)throw new Error("Export failed");var m=s.body.getReader(),u=+s.headers.get("Content-Length");let e=0,t=[];for(;;){var{done:f,value:p}=await m.read();if(f)break;t.push(p),e+=p.length,d.textContent=u?Math.round(e/u*100)+"%":Math.min(95,Math.round(e/1024/1024*10))+"%"}var I=new Blob(t,{type:"application/octet-stream"}),v=window.URL.createObjectURL(I),O=document.createElement("a");O.href=v,O.download=l+".tar",document.body.appendChild(O),O.click(),document.body.removeChild(O),window.URL.revokeObjectURL(v),d.textContent="100%",setTimeout(()=>hideModal(i,r),500)}catch(e){console.error("Export failed:",e),alert("Download failed!"),hideModal(i,r)}}function addOptionToSelect(e,t){var a=document.createElement("option");a.text=t,a.value=t,e.add(a),e.selectedIndex=e.options.length-1}window.onload=async()=>{var e=document.getElementsByTagName("base")[0];for(e?e.href="./public/uploads/":console.error("Base tag not found");!mdEditor.cm;)await new Promise(e=>setTimeout(e,100));Object.assign(DOM,{fileInput:document.getElementById("my_file"),imgInput:document.getElementById("image"),mdSelect:document.getElementById("md-select"),imgSelect:document.getElementById("img-select"),directorySelect:document.getElementById("directory-select"),handSaveBtn:document.getElementById("hand-save"),handExportBtn:document.getElementById("hand-export"),autosaveCountdown:document.getElementById("autosave-countdown")}),DOM.fileInput.addEventListener("change",handleFileUpload),DOM.imgInput.addEventListener("change",handleImageUpload),DOM.mdSelect.addEventListener("change",handleMdSelectChange),DOM.imgSelect.addEventListener("change",handleImgSelectChange),DOM.handSaveBtn.addEventListener("click",handleManualSave),DOM.handExportBtn.addEventListener("click",handleExport),0<state.autoSaveIntervalSeconds&&(state.autoSaveIntervalId=setInterval(autoSave,1e3*state.autoSaveIntervalSeconds)),updateCountdown(),setInterval(updateCountdown,1e3),await getContent("cache");e=await fetchJson(`http://${CONFIG.HOST}:${CONFIG.PORTS.UPLOAD}/directory-tree?directory=`+CONFIG.ORIGINAL_DIR);buildOptions(e,DOM.mdSelect,"file"),buildOptions(e,DOM.directorySelect,"directory"),DOM.mdSelect.value="cache",state.destination=""+CONFIG.ORIGINAL_DIR+CONFIG.DEFAULT_IMG_DIR+"/",DOM.directorySelect.value=CONFIG.DEFAULT_IMG_DIR,await fetchDirectoryTree(state.destination,DOM.imgSelect,"file","Failed to get IMG files")},window.fetchDirectoryTree=async(e,t,a,o)=>{for(;1<t.options.length;)t.remove(1);try{var n=await fetchJson(`http://${CONFIG.HOST}:${CONFIG.PORTS.UPLOAD}/directory-tree?directory=`+e);buildOptions(n,t,a)}catch(e){console.error(e),alert(o)}},window.buildOptions=(e,t,a)=>{if(Array.isArray(e.children))for(var o of e.children){var n;o.type===a&&((n=document.createElement("option")).value=o.name,n.textContent=o.name,t.appendChild(n)),buildOptions(o,t,a)}},window.imgDirectorySelect=()=>{state.destination=DOM.directorySelect.value?""+CONFIG.ORIGINAL_DIR+DOM.directorySelect.value+"/":""+CONFIG.ORIGINAL_DIR+CONFIG.DEFAULT_IMG_DIR+"/",fetchDirectoryTree(state.destination,DOM.imgSelect,"file","Failed to get IMG files")},window.moveImagesToFolder=async(e,t,a,o)=>{for(var n,l=/!\[(.*?)\]\((.*?)\)/g;n=l.exec(t);)if(!n[2].startsWith("http")){var i=n[2].split("/"),r=i[i.length-2],i=i[i.length-1];if(r!==a){var d=new FormData;d.append("fileName",i),d.append("folderName",r),d.append("new_folderName",a),d.append("original_dir",o),d.append("match",JSON.stringify(n));try{var c,s=new XMLHttpRequest,m=(s.open("POST",`http://${CONFIG.HOST}:${CONFIG.PORTS.UPLOAD}/move_image`,!1),s.send(d),JSON.parse(s.responseText));m.success&&(c=`![${n[1]}](${o}${m.data.new_folderName}/${m.data.fileName})`,t=t.replace(n[0],c),setTimeout(()=>e.setMarkdown(t),500))}catch(e){console.error(`Failed to move image ${i}:`,e)}}}};</script></body></html>
+        }
+
+        /* 拖拽上传样式 */
+        .drag-over {
+            border: 2px dashed #ff6f61 !important;
+            background-color: rgba(255, 111, 97, 0.1) !important;
+        }
+
+        .drag-over::after {
+            content: "拖拽图片、视频、MD文件或文件夹到此处上传";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 111, 97, 0.9);
+            color: white;
+            padding: 20px 40px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            z-index: 1000;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="editor">
+        <textarea id="myTextArea" style="display:none;"></textarea>
+    </div>
+
+    <div id="custom-search-dialog" class="custom-search-dialog">
+        <h3>查找和替换</h3>
+        <input type="text" id="custom-search-query" placeholder="查找..."/>
+        <input type="text" id="custom-replace-query" placeholder="替换为..."/>
+        <div>
+            <button onclick="customSearch.findPrev()">上一个</button>
+            <button onclick="customSearch.findNext()">下一个</button>
+            <button onclick="customSearch.replace()">替换</button>
+            <button onclick="customSearch.replaceAll()">全部替换</button>
+            <button onclick="customSearch.close()" style="float: right;">关闭</button>
+        </div>
+        <div id="custom-search-status"></div>
+    </div>
+
+    <div id="generic-modal-overlay" class="modal-overlay"></div>
+    <div id="generic-modal" class="modal">
+        <p id="modal-message"></p>
+        <div id="modal-content"></div>
+    </div>
+
+    <script src="./js/jquery.min.js"></script>
+    <script src="./editormd.js"></script>
+    <script type="text/javascript">
+        // Define CONFIG object first to make it globally available for other scripts.
+        const CONFIG = {
+            HOST: window.location.hostname,
+            DEFAULT_IMG_DIR: 'IMG',
+            ORIGINAL_DIR: './',
+            DEFAULT_AUTOSAVE_INTERVAL: 3600,
+            PORTS: { UPLOAD: 3001, SERVE: 3001 }
+        };
+    </script>
+    <script src="./js/file-manager.js"></script>
+    <script src="./js/editor-functions.js"></script>
+    <script src="./js/custom-search.js"></script>
+    <script src="./css/moment.min.js"></script>
+    <script src="./js/cache-manager.js"></script>
+    <script src="./js/simple-cache-ui.js"></script>
+    <script src="./js/operations-floating-panel.js"></script>
+    <script type="text/javascript">
+        // The main script logic begins here.
+
+        const mdEditor = editormd("editor", {
+            width: "100%",
+            height: "100%",
+            syncScrolling: "single",
+            path: "/md_editor/lib/",
+            theme: 'dark',
+            previewTheme: 'dark',
+            editorTheme: 'paraiso-dark',
+            toolbarAutoFixed: false,
+            saveHTMLToTextarea: true,
+            autoFocus: false,
+            searchReplace: false, // Disable default search
+            watch: true,
+            htmlDecode: true,
+            toolbar: true,
+            codeFold: true,
+            placeholder: "请输入内容...",
+            tocm: true,
+            tocTitle: "目录",
+            taskList: true,
+            searchReplace: true,
+            toolbarIcons: function() {
+                const icons = editormd.toolbarModes.full
+                    .filter(i => !['fullscreen', 'image', 'emoji', 'search'].includes(i)); // Remove default search icon
+                return ['custom_search', ...icons, '|', 'load_md', 'hand_save', 'create_folder', 
+                    'input_img', 'hand_export', 'clean_hexo', 'time', '<br>', 'md_file', 'img_directory', 
+                    'img_file'];
+            },
+            toolbarCustomIcons: {
+                custom_search: '<li><a href="#" onclick="customSearch.open()" title="查找和替换"><i class="fa fa-search"></i></a></li>',
+                load_md: '<input type="file" id="my_file" accept=".md" multiple webkitdirectory directory><li><a href="#" onclick="loadMdFile()" title="Upload MD file or folder"><i class="fa fa-upload"></i></a></li>',
+                input_img: '<form id="up-img-form" enctype="multipart/form-data"><input type="file" name="image" id="image" multiple></form><li><a href="#" onclick="inputImg();return false;" title="Upload images and videos"><i class="fas fa fa-images" style="color: #777777;"></i></a></li>',
+                md_file: '<select id="md-select" name="file" style="display: none;"><option value="" selected>选择要读取的MD文件</option></select><div class="tech-file-selector" onclick="showTechSelector(\'md-select\')"><span class="selector-icon">📄</span><span class="selector-text">MD 文件</span></div>',
+                img_directory: '<select name="destination" id="directory-select" onchange="imgDirectorySelect()" style="display: none;"><option value="" selected>选择存放图片的文件夹</option></select><div class="tech-file-selector" onclick="showTechSelector(\'directory-select\')"><span class="selector-icon">📁</span><span class="selector-text">文件夹</span></div>',
+                img_file: '<select id="img-select" name="file" style="display: none;"><option value="" selected>选择要植入的图片或视频</option></select><div class="tech-file-selector" onclick="showTechSelector(\'img-select\')"><span class="selector-icon">🖼️</span><span class="selector-text">图片/视频文件</span></div>',
+                hand_save: '<li><a href="#" onclick="handSave()" title="Save file"><i class="fas fa fa-save" style="color: #777777;"></i></a></li><button style="display: none;" id="hand-save">Save current editor content</button>',
+                hand_export: '<li><a href="#" onclick="handExport()" title="Compressed export"><i class="fas fa fa-download" style="color: #777777;"></i></a></li><button style="display: none;" id="hand-export">Compressed export</button>',
+                clean_hexo: '<li><a href="#" onclick="cleanHexo()" title="Clean Hexo cache and regenerate"><i class="fas fa-sync-alt" style="color: #777777;"></i></a></li><button style="display: none;" id="clean-hexo">Clean Hexo Cache</button>',
+                time: '<li><a href="#" title="Set autosave interval" onclick="setAutoSaveInterval();return false;"><i class="fas fa-history" style="color: #777777;"></i></a><span id="autosave-countdown" style="margin-left: 5px; color: #ffffff; font-size: 12px;"></span></li>',
+                create_folder: '<li><a href="#" title="Create folder" onclick="createFolderPrompt();return false;"><i class="fas fa-folder-plus" style="color: #777777;"></i></a></li>'
+            },
+            lang: {
+                toolbar: {
+                    load_md: "Upload file",
+                    input_img: "Upload image",
+                    img_directory: "Image storage location",
+                    md_file: "Show MD files in directory",
+                    hand_save: "Manually save editor content",
+                    hand_export: "Compressed export",
+                    time: "Autosave interval",
+                    create_folder: "Create folder corresponding to MD file"
+                }
+            }
+        });
+
+        let state = {
+            currentFilename: 'cache',
+            destination: '',
+            autoSaveIntervalId: null,
+            autoSaveIntervalSeconds: CONFIG.DEFAULT_AUTOSAVE_INTERVAL,
+            remainingSeconds: CONFIG.DEFAULT_AUTOSAVE_INTERVAL,
+            canceledFolders: new Set(JSON.parse(localStorage.getItem('canceledFolders') || '[]')),
+            lastCursorPosition: null,
+            hasContentChanged: false  // 新增：跟踪内容是否有变化
+        };
+
+        const DOM = {};
+
+        const fetchJson = async (url, options = {}) => {
+            const response = await fetch(url, options);
+            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+            return response.json();
+        };
+
+        function showModal(message, content = '') {
+            const modal = document.getElementById('generic-modal');
+            const overlay = document.getElementById('generic-modal-overlay');
+            document.getElementById('modal-message').textContent = message;
+            document.getElementById('modal-content').innerHTML = content;
+            modal.style.display = 'block';
+            overlay.style.display = 'block';
+            modal.classList.add('show');
+            return { modal, overlay };
+        }
+
+        function hideModal(modal, overlay) {
+            modal.style.display = 'none';
+            overlay.style.display = 'none';
+            modal.classList.remove('show');
+        }
+
+        function loadMdFile() {
+            const { modal, overlay } = showModal('请选择上传类型 / Please select upload type:', 
+                '<button id="upload-md-btn">MD文件 / MD File</button><button id="upload-folder-btn">文件夹 / Folder</button>');
+            const mdBtn = document.getElementById('upload-md-btn');
+            const folderBtn = document.getElementById('upload-folder-btn');
+
+            mdBtn.onclick = () => {
+                DOM.fileInput.setAttribute('accept', '.md');
+                DOM.fileInput.removeAttribute('webkitdirectory');
+                DOM.fileInput.setAttribute('multiple', '');
+                DOM.fileInput.click();
+                hideModal(modal, overlay);
+            };
+
+            folderBtn.onclick = () => {
+                DOM.fileInput.removeAttribute('accept');
+                DOM.fileInput.setAttribute('webkitdirectory', '');
+                DOM.fileInput.removeAttribute('multiple');
+                DOM.fileInput.click();
+                hideModal(modal, overlay);
+            };
+
+            overlay.onclick = () => hideModal(modal, overlay);
+        }
+
+        function inputImg() { DOM.imgInput.click(); }
+
+        function sanitizeFilenameForSave(filename) {
+            if (!filename) return '';
+            
+            const name = filename.replace(/\.(md|txt|html)$/i, '');
+            
+            // 替换空格和特殊字符，保留中文
+            let safeName = name
+                .replace(/\s+/g, '_')  // 空格替换为下划线
+                .replace(/[<>:\"/\\|?*]/g, '_')  // 替换Windows不允许的字符
+                .replace(/[.]{2,}/g, '_')  // 连续的点替换为下划线
+                .replace(/^[._-]+|[._-]+$/g, '');  // 移除开头和结尾的特殊字符
+            
+            if (!safeName) {
+                safeName = `file_${Date.now()}`;
+            }
+            
+            return safeName;
+        }
+
+        function extractTitleFromMarkdown(content) {
+            if (!content) return null;
+
+            // 优先从 YAML front-matter 中提取 title
+            const frontMatterMatch = content.match(/^title:\s*(.*)/m);
+            if (frontMatterMatch && frontMatterMatch[1]) {
+                const title = frontMatterMatch[1].trim();
+                if (title && title !== 'Untitled' && title !== 'cache') {
+                    return title;
+                }
+            }
+
+            // 如果 front-matter 中没有，则查找 H1 标题
+            const h1Match = content.match(/^#\s+(.*)/m);
+            if (h1Match && h1Match[1]) {
+                return h1Match[1].trim();
+            }
+
+            return null;
+        }
+
+        async function handSave() {
+            const content = mdEditor.getMarkdown();
+            if (!content) {
+                showMessage('编辑器内容为空，无法保存。', 'error');
+                return;
+            }
+
+            let fileName = state.currentFilename;
+            
+            // Logic for saving a NEW file
+            if (!fileName || fileName === 'cache') {
+                let title = extractTitleFromMarkdown(content);
+
+                if (!title) {
+                    title = prompt('未在文档中找到标题，请手动输入文件名：', 'Untitled');
+                    if (!title) {
+                        showMessage('用户取消了保存操作。', 'info');
+                        return;
+                    }
+                }
+                
+                const sanitizedName = sanitizeFilenameForSave(title);
+                fileName = `${sanitizedName}.md`;
+
+                // 1. Save the .md file to the root directory. Pass CONFIG.ORIGINAL_DIR to the server.
+                const saveResult = await saveContent(fileName, CONFIG.ORIGINAL_DIR, content, false);
+
+                if (saveResult && saveResult.success) {
+                    // 2. Create the corresponding asset folder at the same level.
+                    const assetDirectoryPath = await createAndSyncFolder(sanitizedName, CONFIG.ORIGINAL_DIR);
+
+                    // 3. Update state and UI to reflect the new file and its asset folder.
+                    state.currentFilename = fileName;
+                    state.destination = assetDirectoryPath || `${CONFIG.ORIGINAL_DIR}${sanitizedName}/`;
+                    
+                    // Update dropdowns
+                    const mdSelect = document.getElementById('md-select');
+                    if (!Array.from(mdSelect.options).some(opt => opt.value === fileName)) {
+                        addOptionToSelect(mdSelect, fileName);
+                    }
+                    mdSelect.value = fileName;
+
+                    // The directory select should now show the new folder as selected
+                    const dirSelect = document.getElementById('directory-select');
+                    dirSelect.value = sanitizedName;
+
+                    // Update UI display
+                    if (window.updateSelectorText) {
+                        updateSelectorText('md-select', 'MD 文件');
+                        updateSelectorText('directory-select', '文件夹');
+                    }
+                    // 打印后端返回的完整结果
+                    //console.log('后端保存结果:', saveResult);
+                    showMessage(`文件保存成功！`);
+                    // 保存完成后重新加载内容，确保编辑器显示最新状态
+                    await getContent(fileName, saveResult.content); // 使用后端返回的 content 更新编辑器
+                    state.remainingSeconds = state.autoSaveIntervalSeconds; // 重置倒计时
+                    updateCountdown(); // 更新倒计时显示
+                } else if (saveResult === null) {
+                    // saveContent 返回 null 表示保存失败，错误消息已在 saveContent 内部显示
+                    return;
+                }
+            } else {
+                // Logic for saving an EXISTING file.
+                // Existing MD files are always in the root. Pass CONFIG.ORIGINAL_DIR to the server.
+                const saveResult = await saveContent(fileName, CONFIG.ORIGINAL_DIR, content, false);
+                if (saveResult && saveResult.success) { // 检查 saveResult 是否存在且成功
+                    // 打印后端返回的完整结果
+                    //console.log('后端保存结果:', saveResult);
+                    showMessage(`文件保存成功！后端返回: ${JSON.stringify(saveResult)}`, 'success');
+                    // 保存完成后重新加载内容，确保编辑器显示最新状态
+                    await getContent(fileName, saveResult.content); // 使用后端返回的 content 更新编辑器
+                    state.remainingSeconds = state.autoSaveIntervalSeconds; // 重置倒计时
+                    updateCountdown(); // 更新倒计时显示
+                } else if (saveResult === null) {
+                    // saveContent 返回 null 表示保存失败，错误消息已在 saveContent 内部显示
+                    return;
+                }
+            }
+        }
+
+        function handExport() { DOM.handExportBtn.click(); }
+
+        async function cleanHexo() {
+            const { modal, overlay } = showModal('正在清理 Hexo 缓存并重新生成...', '<div class="progress-circle"></div>');
+            
+            try {
+                const formData = new FormData();
+                const response = await fetch(`http://${CONFIG.HOST}:${CONFIG.PORTS.UPLOAD}/clean_hexo`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.message || 'Hexo 初始化失败');
+                }
+
+                // 记录初始化时间
+                localStorage.setItem('lastHexoInit', Date.now().toString());
+                
+                hideModal(modal, overlay);
+                showMessage('Hexo 初始化成功！', 'success');
+            } catch (error) {
+                console.error('Hexo 缓存清理失败:', error);
+                hideModal(modal, overlay);
+                showMessage(`清理失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function saveContent(filename, directory, content, isAuto = false) {
+            // 如果是自动保存且内容没有变化，跳过保存
+            //console.log(content)
+            if (isAuto && !state.hasContentChanged) {
+                return true;
+            }
+
+            try {
+                const baseName = filename.replace(/\.md$/, '');
+                
+                const response = await fetch(`http://${CONFIG.HOST}:${CONFIG.PORTS.UPLOAD}/save_md`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        destination: directory, 
+                        filename: filename, 
+                        currentContent: content,
+                        hasImages: /!\[.*?\]\(.*?\)/g.test(content) || /<video[^>]*src="[^"]*"[^>]*>/g.test(content)
+                    })
+                });
+
+                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                
+                const result = await response.json();
+                if (result.success) {
+                    if (!isAuto) {
+                        showMessage(`文件 ${filename} 保存成功 (已优化视频路径兼容性)`, 'success');
+                    }
+                    state.hasContentChanged = false;
+                    return result; // 成功时返回后端响应的完整 result 对象
+                } else {
+                    throw new Error(result.message || 'Save failed');
+                }
+            } catch (error) {
+                console.error('保存失败:', error);
+                if (!isAuto) {
+                    showMessage(`保存失败: ${error.message}`, 'error');
+                }
+                return null; // 失败时返回 null
+            }
+        }
+
+
+        // getContent 函数已移至 editor-functions.js 文件中
+
+        function showMessage(message, type = 'info') {
+            // 创建消息元素
+            const messageDiv = document.createElement('div');
+            messageDiv.textContent = message;
+            messageDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 12px 20px;
+                border-radius: 4px;
+                color: white;
+                font-size: 14px;
+                z-index: 10000;
+                max-width: 300px;
+                word-wrap: break-word;
+                ${type === 'success' ? 'background-color: #4CAF50;' : 
+                  type === 'error' ? 'background-color: #f44336;' : 
+                  'background-color: #2196F3;'}
+            `;
+            
+            document.body.appendChild(messageDiv);
+            
+            // 3秒后自动移除
+            setTimeout(() => {
+                if (messageDiv.parentNode) {
+                    messageDiv.parentNode.removeChild(messageDiv);
+                }
+            }, 3000);
+        }
+
+        function updateCountdown() {
+            if (!DOM.autosaveCountdown) return;
+            if (state.autoSaveIntervalSeconds === 0) {
+                DOM.autosaveCountdown.textContent = '自动保存已关闭';
+            } else {
+                const minutes = Math.floor(state.remainingSeconds / 60);
+                const seconds = state.remainingSeconds % 60;
+                DOM.autosaveCountdown.textContent = `剩余 ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+                if (state.remainingSeconds > 0) state.remainingSeconds--;
+                else state.remainingSeconds = state.autoSaveIntervalSeconds;
+            }
+        }
+
+        async function autoSave() {
+            if (!state.currentFilename) return;
+            
+            // 使用 mdEditor 而不是 DOM.editor
+            const content = mdEditor ? mdEditor.getMarkdown() : '';
+            if (!content) {
+                console.error('无法获取编辑器内容');
+                return;
+            }
+            
+            const filename = state.currentFilename || 'cache';
+            
+            try {
+                // 使用 saveContent 函数保存内容，确保视频路径处理一致
+                await saveContent(filename, './', content, true);
+                console.log('Auto-save successful');
+            } catch (error) {
+                console.error('Auto-save error:', error);
+            }
+        }
+
+        function setAutoSaveInterval() {
+            const newInterval = parseInt(prompt("Enter autosave interval (seconds):", state.autoSaveIntervalSeconds));
+            if (!isNaN(newInterval)) {
+                if (newInterval > 0 && newInterval !== state.autoSaveIntervalSeconds) {
+                    state.autoSaveIntervalSeconds = newInterval;
+                    state.remainingSeconds = newInterval;
+                    if (state.autoSaveIntervalId) clearInterval(state.autoSaveIntervalId);
+                    state.autoSaveIntervalId = setInterval(autoSave, newInterval * 1000);
+                } else if (newInterval === 0) {
+                    state.autoSaveIntervalSeconds = 0;
+                    state.remainingSeconds = 0;
+                    if (state.autoSaveIntervalId) clearInterval(state.autoSaveIntervalId);
+                    state.autoSaveIntervalId = null;
+                }
+                updateCountdown();
+            }
+        }
+
+        async function createAndSyncFolder(folderName, parentDir) {
+            if (!folderName || Array.from(DOM.directorySelect.options).some(opt => opt.value === folderName)) {
+                if (folderName) alert("Folder name already exists!");
+                return null;
+            }
+            const formData = new FormData();
+            formData.append('folderName', folderName);
+            formData.append('folderPath', parentDir);
+            try {
+                const data = await fetchJson(`http://${CONFIG.HOST}:${CONFIG.PORTS.UPLOAD}/create_folder`, {
+                    method: 'POST',
+                    body: formData
+                });
+                if (data.success) {
+                    console.log('Folder created successfully!');
+                    addOptionToSelect(DOM.directorySelect, folderName);
+                    const newDirPath = `${parentDir}${folderName}/`;
+                    state.destination = newDirPath;
+                    DOM.directorySelect.value = folderName;
+                    
+                    // 更新文件夹选择器显示文本
+                    if (window.updateSelectorText) {
+                        window.updateSelectorText('directory-select', '文件夹');
+                    }
+                    
+                    await fetchDirectoryTree(newDirPath, DOM.imgSelect, 'file', 'Failed to get IMG files');
+                    
+                    // 更新图片选择器显示文本
+                    if (window.updateSelectorText) {
+                        window.updateSelectorText('img-select', '图片/视频文件');
+                    }
+                    return newDirPath;
+                }
+                console.error('Folder creation failed:', data.message);
+                return null;
+            } catch (error) {
+                console.error('Folder creation failed:', error);
+                return null;
+            }
+        }
+
+        function createFolderPrompt() {
+            const folderName = prompt("Enter folder name:");
+            if (folderName) createAndSyncFolder(folderName, CONFIG.ORIGINAL_DIR);
+        }
+
+        // 使用 fileManager 的 uploadFiles 方法，避免代码重复
+        async function uploadFiles(files, url, options = {}) {
+            return fileManager.uploadFiles(files, url, options);
+        }
+
+        window.onload = async () => {
+            const baseElement = document.getElementsByTagName('base')[0];
+            if (baseElement) baseElement.href = './public/uploads/';
+            else console.error('Base tag not found');
+
+            while (!mdEditor.cm) await new Promise(resolve => setTimeout(resolve, 100));
+            
+            customSearch.init(mdEditor); // Initialize custom search
+
+            // Forcefully override the keymap for search after a delay
+            setTimeout(() => {
+                const keyMap = {
+                    "Cmd-F": function(cm) { customSearch.open(); },
+                    "Ctrl-F": function(cm) { customSearch.open(); }
+                };
+                mdEditor.cm.addKeyMap(keyMap, true); // Prepend the keymap to give it priority
+            }, 500);
+            Object.assign(DOM, {
+                fileInput: document.getElementById('my_file'),
+                imgInput: document.getElementById('image'),
+                mdSelect: document.getElementById('md-select'),
+                imgSelect: document.getElementById('img-select'),
+                directorySelect: document.getElementById('directory-select'),
+                handSaveBtn: document.getElementById('hand-save'),
+                handExportBtn: document.getElementById('hand-export'),
+                autosaveCountdown: document.getElementById('autosave-countdown')
+            });
+
+            setupDragAndDrop();
+            setupContentChangeListener();
+
+            DOM.fileInput.addEventListener('change', handleFileUpload);
+            DOM.imgInput.addEventListener('change', handleImageUpload);
+            DOM.mdSelect.addEventListener('change', function() {
+                handleMdSelectChange();
+                updateSelectorText('md-select', 'MD 文件');
+                // 注意：handleMdSelectChange 函数内部已经包含了文件夹同步逻辑
+                // 不需要再次调用 syncFolderWithMdFile()
+            });
+            DOM.imgSelect.addEventListener('change', function() {
+                handleImgSelectChange();
+                updateSelectorText('img-select', '图片/视频文件');
+            });
+            DOM.directorySelect.addEventListener('change', function() {
+                imgDirectorySelect();
+                updateSelectorText('directory-select', '文件夹');
+            });
+            DOM.handSaveBtn.addEventListener('click', handleManualSave);
+            DOM.handExportBtn.addEventListener('click', handleExport);
+
+            // 初始化选择器显示文本
+            setTimeout(() => {
+                updateSelectorText('md-select', 'MD 文件');
+                updateSelectorText('directory-select', '文件夹');
+                updateSelectorText('img-select', '图片/视频文件');
+            }, 1000);
+
+            await getContent('cache');
+            
+            // 初始化完成后再启动自动保存，避免初始化时触发保存
+            if (state.autoSaveIntervalSeconds > 0) {
+                state.autoSaveIntervalId = setInterval(autoSave, state.autoSaveIntervalSeconds * 1000);
+            }
+            updateCountdown();
+            setInterval(updateCountdown, 1000);
+            const rootDirData = await fetchJson(`http://${CONFIG.HOST}:${CONFIG.PORTS.UPLOAD}/directory-tree?directory=${CONFIG.ORIGINAL_DIR}`);
+            // The response is an object { name: '...', children: [...] }. We need to pass the children array.
+            if (rootDirData && rootDirData.children) {
+                // Directly build options for MD files
+                while (DOM.mdSelect.options.length > 1) DOM.mdSelect.remove(1);
+                if (window.buildOptions) window.buildOptions({ children: rootDirData.children }, DOM.mdSelect, 'file');
+                setTimeout(() => { updateSelectorText('md-select', 'MD 文件'); }, 500);
+
+                // Directly build options for directories
+                while (DOM.directorySelect.options.length > 1) DOM.directorySelect.remove(1);
+                if (window.buildOptions) window.buildOptions({ children: rootDirData.children }, DOM.directorySelect, 'directory');
+                setTimeout(() => { updateSelectorText('directory-select', '文件夹'); }, 500);
+            }
+            DOM.mdSelect.value = 'cache';
+            state.destination = `${CONFIG.ORIGINAL_DIR}${CONFIG.DEFAULT_IMG_DIR}/`;
+            DOM.directorySelect.value = CONFIG.DEFAULT_IMG_DIR;
+            await fetchDirectoryTree(state.destination, DOM.imgSelect, 'file', 'Failed to get IMG files');
+            
+            // 确保初始化后正确显示选中的文件
+            setTimeout(() => {
+                updateSelectorText('md-select', 'MD 文件');
+                updateSelectorText('directory-select', '文件夹');
+                updateSelectorText('img-select', '图片/视频文件');
+            }, 500);
+        };
+
+        function addOptionToSelect(selectMenu, value) {
+            const newOption = document.createElement("option");
+            newOption.value = value;
+            
+            // 获取当前选项的数量（排除第一个默认选项）
+            const optionCount = selectMenu.options.length - 1; 
+            newOption.text = `${optionCount + 1}. ${value}`; // 添加序号
+            
+            selectMenu.add(newOption);
+            selectMenu.selectedIndex = selectMenu.options.length - 1;
+        }
+
+        window.imgDirectorySelect = () => {
+            state.destination = DOM.directorySelect.value 
+                ? `${CONFIG.ORIGINAL_DIR}${DOM.directorySelect.value}/`
+                : `${CONFIG.ORIGINAL_DIR}${CONFIG.DEFAULT_IMG_DIR}/`;
+            fetchDirectoryTree(state.destination, DOM.imgSelect, 'file', 'Failed to get IMG files');
+        };
+
+        // 视频路径兼容性处理函数
+        window.optimizeContentForHexo = function(content) {
+            // 将编辑器格式的视频路径转换为Hexo格式（只保留文件名，去掉文件夹路径）
+            return content.replace(/<video([^>]*)\ssrc="\.\/[^\/]*\/([^"]*)"([^>]*)>/g, 
+                '<video$1 src="$2"$3>')
+                // 同时处理IMG文件夹的情况
+                .replace(/<video([^>]*)\ssrc="\.\/IMG\/([^"]*)"([^>]*)>/g, 
+                '<video$1 src="$2"$3>');
+        };
+
+        window.optimizeContentForEditor = function(content) {
+            // 将Hexo格式的视频路径转换为编辑器格式（添加完整相对路径）
+            return content.replace(/<video([^>]*)\ssrc="([^"]*)"([^>]*)>/g, (match, before, src, after) => {
+                // 如果路径不以 ./ 开头且不是绝对路径，添加完整的相对路径
+                if (!src.startsWith('./') && !src.startsWith('http') && !src.startsWith('/')) {
+                    // 根据当前选择的文件夹构建完整路径
+                    const currentFolder = DOM.directorySelect ? DOM.directorySelect.value : 'IMG';
+                    return `<video${before} src="./${currentFolder}/${src}"${after}>`;
+                }
+                return match;
+            });
+        };
+
+
+        // 防止重复触发的标志
+        let cleanupSent = false;
+        let cleanupTimeout = null;
+
+        // 发送清理请求的统一函数
+        function sendCleanupRequest(reason) {
+            if (cleanupSent) {
+                console.log(`${reason} - 清理请求已发送，跳过重复请求`);
+                return;
+            }
+            
+            console.log(`${reason} - 发送清理请求...`);
+            const success = navigator.sendBeacon('http://localhost:3001/clean_hexo');
+            console.log('sendBeacon 发送结果:', success);
+            
+            if (success) {
+                cleanupSent = true;
+                // 5秒后重置标志，允许下次操作
+                cleanupTimeout = setTimeout(() => {
+                    cleanupSent = false;
+                }, 5000);
+            }
+        }
+
+        // 页面关闭时自动清理 Hexo 缓存
+        window.addEventListener('beforeunload', function(e) {
+            sendCleanupRequest('页面即将关闭');
+        });
+
+        // 移除页面隐藏时的清理触发，避免刷新时误触发
+        // document.addEventListener('visibilitychange', function() {
+        //     if (document.visibilityState === 'hidden') {
+        //         sendCleanupRequest('页面隐藏');
+        //     }
+        // });
+
+        // 初始化状态面板
+        initStatusPanel();
+
+        // 科技感选择器功能
+        window.showTechSelector = function(selectId) {
+            const select = document.getElementById(selectId);
+            if (select) {
+                // 创建科技感的下拉菜单
+                createTechDropdown(select);
+            }
+        };
+
+        // 更新选择器显示文本
+        window.updateSelectorText = function(selectId, defaultText) {
+            const select = document.getElementById(selectId);
+            if (!select) return;
+            
+            // 查找对应的科技感选择器
+            let selector = null;
+            const allSelectors = document.querySelectorAll('.tech-file-selector, .tech-file-selector-v2');
+            
+            // 通过onclick属性匹配找到对应的选择器
+            for (let sel of allSelectors) {
+                const onclick = sel.getAttribute('onclick');
+                if (onclick && onclick.includes(selectId)) {
+                    selector = sel;
+                    break;
+                }
+            }
+            
+            if (selector) {
+                const textElement = selector.querySelector('.selector-text');
+                if (textElement) {
+                    const selectedValue = select.value;
+                    if (selectedValue && selectedValue !== '') {
+                        // 显示选中的文件名
+                        textElement.textContent = selectedValue;
+                    } else {
+                        // 显示默认文本
+                        textElement.textContent = defaultText;
+                    }
+                }
+            }
+        }
+
+        // The conflicting buildOptionsAndUpdateText function has been removed.
+        // Its logic is now inlined in the window.onload handler to ensure
+        // the correct global buildOptions from editor-functions.js is always used.
+
+        // 同步文件夹选择器与MD文件选择
+        function syncFolderWithMdFile() {
+            const selectedMdFile = DOM.mdSelect.value;
+            if (selectedMdFile && selectedMdFile !== '') {
+                // 获取MD文件名（去掉.md扩展名）
+                const baseName = selectedMdFile.replace(/\.md$/, '');
+                
+                // 检查是否存在同名文件夹
+                const folderOptions = Array.from(DOM.directorySelect.options);
+                const matchingFolder = folderOptions.find(option => option.value === baseName);
+                
+                if (matchingFolder) {
+                    // 如果存在同名文件夹，自动选择它
+                    DOM.directorySelect.value = baseName;
+                    state.destination = `${CONFIG.ORIGINAL_DIR}${baseName}/`;
+                    
+                    // 更新显示文本
+                    updateSelectorText('directory-select', '文件夹');
+                    
+                    // 更新图片文件列表
+                    fetchDirectoryTree(state.destination, DOM.imgSelect, 'file', 'Failed to get IMG files')
+                        .then(() => {
+                            updateSelectorText('img-select', '图片/视频文件');
+                        });
+                } else {
+                    // 如果不存在同名文件夹，回到默认IMG文件夹
+                    DOM.directorySelect.value = CONFIG.DEFAULT_IMG_DIR;
+                    state.destination = `${CONFIG.ORIGINAL_DIR}${CONFIG.DEFAULT_IMG_DIR}/`;
+                    
+                    // 更新显示文本
+                    updateSelectorText('directory-select', '文件夹');
+                    
+                    // 更新图片文件列表
+                    fetchDirectoryTree(state.destination, DOM.imgSelect, 'file', 'Failed to get IMG files')
+                        .then(() => {
+                            updateSelectorText('img-select', '图片/视频文件');
+                        });
+                }
+            }
+        }
+
+        // 状态面板中的选择器函数
+        window.showMdFileSelector = function() {
+            const options = Array.from(DOM.mdSelect.options).filter(option => option.value !== '');
+            if (options.length === 0) {
+                showMessage('暂无MD文件可选择', 'info');
+                return;
+            }
+            
+            createStatusDropdown('MD文件选择', options, (selectedValue) => {
+                DOM.mdSelect.value = selectedValue;
+                const event = new Event('change', { bubbles: true });
+                DOM.mdSelect.dispatchEvent(event);
+                updateSelectorText('md-select', 'MD 文件');
+                syncFolderWithMdFile();
+            });
+        };
+
+        window.showFolderSelector = function() {
+            const options = Array.from(DOM.directorySelect.options).filter(option => option.value !== '');
+            if (options.length === 0) {
+                showMessage('暂无文件夹可选择', 'info');
+                return;
+            }
+            
+            createStatusDropdown('文件夹选择', options, (selectedValue) => {
+                DOM.directorySelect.value = selectedValue;
+                state.destination = `${CONFIG.ORIGINAL_DIR}${selectedValue}/`;
+                updateSelectorText('directory-select', '文件夹');
+                fetchDirectoryTree(state.destination, DOM.imgSelect, 'file', 'Failed to get IMG files')
+                    .then(() => {
+                        updateSelectorText('img-select', '图片/视频文件');
+                    });
+            });
+        };
+
+        window.showMediaSelector = function() {
+            const options = Array.from(DOM.imgSelect.options).filter(option => option.value !== '');
+            if (options.length === 0) {
+                showMessage('当前文件夹中暂无媒体文件', 'info');
+                return;
+            }
+            
+            createStatusDropdown('媒体文件选择', options, (selectedValue) => {
+                DOM.imgSelect.value = selectedValue;
+                const event = new Event('change', { bubbles: true });
+                DOM.imgSelect.dispatchEvent(event);
+                updateSelectorText('img-select', '图片/视频文件');
+            });
+        };
+
+        // 创建状态面板下拉选择器
+        function createStatusDropdown(title, options, onSelect) {
+            // 移除已存在的下拉菜单
+            const existingDropdown = document.querySelector('.status-dropdown');
+            if (existingDropdown) {
+                existingDropdown.remove();
+            }
+
+            // 创建下拉菜单
+            const dropdown = document.createElement('div');
+            dropdown.className = 'status-dropdown';
+            dropdown.style.cssText = `
+                position: fixed;
+                background: linear-gradient(135deg, #2a2827 0%, #3a3534 100%);
+                border: 1px solid rgba(255, 107, 53, 0.5);
+                border-radius: 12px;
+                padding: 12px;
+                box-shadow: 0 8px 32px rgba(255, 107, 53, 0.3);
+                z-index: 10001;
+                max-height: 300px;
+                overflow-y: auto;
+                min-width: 250px;
+                backdrop-filter: blur(15px);
+                color: #ffffff;
+                font-family: 'Consolas', 'Monaco', monospace;
+            `;
+
+            // 添加标题
+            const titleElement = document.createElement('div');
+            titleElement.style.cssText = `
+                font-weight: bold;
+                color: #ff6b35;
+                font-size: 13px;
+                margin-bottom: 10px;
+                text-align: center;
+                padding-bottom: 8px;
+                border-bottom: 1px solid rgba(255, 107, 53, 0.3);
+            `;
+            titleElement.textContent = title;
+            dropdown.appendChild(titleElement);
+
+            // 添加选项
+            options.forEach((option, index) => {
+                const item = document.createElement('div');
+                item.className = 'status-dropdown-item';
+                item.textContent = option.textContent || option.value;
+                item.style.cssText = `
+                    padding: 8px 12px;
+                    cursor: pointer;
+                    border-radius: 6px;
+                    font-size: 12px;
+                    transition: all 0.3s ease;
+                    border: 1px solid transparent;
+                    margin: 2px 0;
+                `;
+
+                item.addEventListener('mouseenter', function() {
+                    this.style.background = 'rgba(255, 107, 53, 0.2)';
+                    this.style.borderColor = 'rgba(255, 107, 53, 0.5)';
+                    this.style.transform = 'translateX(4px)';
+                });
+
+                item.addEventListener('mouseleave', function() {
+                    this.style.background = 'transparent';
+                    this.style.borderColor = 'transparent';
+                    this.style.transform = 'translateX(0)';
+                });
+
+                item.addEventListener('click', function() {
+                    onSelect(option.value);
+                    dropdown.remove();
+                });
+
+                dropdown.appendChild(item);
+            });
+
+            // 定位下拉菜单（显示在状态面板旁边）
+            const statusPanel = document.querySelector('#status-floating-panel') || 
+                               document.querySelector('.status-floating-panel');
+            if (statusPanel) {
+                const rect = statusPanel.getBoundingClientRect();
+                dropdown.style.left = (rect.left - 260) + 'px';
+                dropdown.style.top = rect.top + 'px';
+            } else {
+                dropdown.style.left = '50%';
+                dropdown.style.top = '50%';
+                dropdown.style.transform = 'translate(-50%, -50%)';
+            }
+
+            // 添加到页面
+            document.body.appendChild(dropdown);
+
+            // 点击外部关闭
+            setTimeout(() => {
+                document.addEventListener('click', function closeDropdown(e) {
+                    if (!dropdown.contains(e.target)) {
+                        dropdown.remove();
+                        document.removeEventListener('click', closeDropdown);
+                    }
+                });
+            }, 100);
+        }
+
+        function createTechDropdown(select) {
+            // 检查是否已经存在科技感下拉菜单
+            const existingDropdown = document.querySelector('.tech-dropdown');
+            if (existingDropdown) {
+                existingDropdown.remove();
+            }
+
+            const options = Array.from(select.options).filter(option => option.value !== '');
+            if (options.length === 0) {
+                // 如果没有选项，显示提示信息
+                const dropdown = document.createElement('div');
+                dropdown.className = 'tech-dropdown';
+                dropdown.style.cssText = `
+                    position: fixed;
+                    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+                    border: 1px solid rgba(255, 111, 97, 0.5);
+                    border-radius: 12px;
+                    padding: 12px;
+                    box-shadow: 0 8px 32px rgba(255, 111, 97, 0.3);
+                    z-index: 10000;
+                    color: #ff6f61;
+                    font-family: 'Courier New', monospace;
+                    font-size: 12px;
+                    text-align: center;
+                `;
+                dropdown.textContent = '暂无可选项目';
+                
+                const rect = event.target.getBoundingClientRect();
+                dropdown.style.left = rect.left + 'px';
+                dropdown.style.top = (rect.bottom + 5) + 'px';
+                
+                document.body.appendChild(dropdown);
+                
+                setTimeout(() => {
+                    dropdown.remove();
+                }, 2000);
+                return;
+            }
+
+            // 创建科技感下拉菜单
+            const dropdown = document.createElement('div');
+            dropdown.className = 'tech-dropdown';
+            dropdown.style.cssText = `
+                position: fixed;
+                background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+                border: 1px solid rgba(0, 255, 255, 0.5);
+                border-radius: 12px;
+                padding: 8px;
+                box-shadow: 0 8px 32px rgba(0, 255, 255, 0.3);
+                z-index: 10000;
+                max-height: 300px;
+                overflow-y: auto;
+                min-width: 200px;
+                backdrop-filter: blur(15px);
+            `;
+
+            // 添加选项
+            options.forEach((option, index) => {
+                const item = document.createElement('div');
+                item.className = 'tech-dropdown-item';
+                item.textContent = option.textContent;
+                item.style.cssText = `
+                    padding: 8px 12px;
+                    color: #00ffff;
+                    cursor: pointer;
+                    border-radius: 6px;
+                    font-family: 'Courier New', monospace;
+                    font-size: 12px;
+                    transition: all 0.3s ease;
+                    border: 1px solid transparent;
+                `;
+
+                item.addEventListener('mouseenter', function() {
+                    this.style.background = 'rgba(0, 255, 255, 0.2)';
+                    this.style.borderColor = 'rgba(0, 255, 255, 0.5)';
+                    this.style.transform = 'translateX(4px)';
+                });
+
+                item.addEventListener('mouseleave', function() {
+                    this.style.background = 'transparent';
+                    this.style.borderColor = 'transparent';
+                    this.style.transform = 'translateX(0)';
+                });
+
+                item.addEventListener('click', function() {
+                    select.value = option.value;
+                    // 触发 change 事件
+                    const event = new Event('change', { bubbles: true });
+                    select.dispatchEvent(event);
+                    
+                    // 更新选择器显示文本
+                    if (select.id === 'md-select') {
+                        updateSelectorText('md-select', 'MD 文件');
+                    } else if (select.id === 'directory-select') {
+                        updateSelectorText('directory-select', '文件夹');
+                        imgDirectorySelect();
+                    } else if (select.id === 'img-select') {
+                        updateSelectorText('img-select', '图片/视频文件');
+                    }
+                    
+                    dropdown.remove();
+                });
+
+                dropdown.appendChild(item);
+            });
+
+            // 定位下拉菜单
+            const rect = event.target.getBoundingClientRect();
+            dropdown.style.left = rect.left + 'px';
+            dropdown.style.top = (rect.bottom + 5) + 'px';
+
+            // 添加到页面
+            document.body.appendChild(dropdown);
+
+            // 点击外部关闭
+            setTimeout(() => {
+                document.addEventListener('click', function closeDropdown(e) {
+                    if (!dropdown.contains(e.target)) {
+                        dropdown.remove();
+                        document.removeEventListener('click', closeDropdown);
+                    }
+                });
+            }, 100);
+        }
+    
+
+    // 状态面板功能
+    function initStatusPanel() {
+        let statusPanel = null;
+        let statusToggleButton = null;
+        let statusPanelVisible = true; // 默认展开模式
+
+        // 创建状态面板切换按钮 - 与工具面板尺寸一致，支持拖动
+        statusToggleButton = document.createElement('div');
+        statusToggleButton.style.cssText = 'position: fixed; top: 120px; right: 20px; width: 50px; height: 50px; background: linear-gradient(135deg, #ff6b35, #f7931e); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: move; z-index: 9999; box-shadow: 0 3px 12px rgba(255, 107, 53, 0.3); transition: all 0.3s ease; font-size: 20px; color: white; user-select: none;';
+        statusToggleButton.innerHTML = '✕'; // 默认显示关闭图标，因为面板默认展开
+        statusToggleButton.title = '关闭状态面板 (可拖动)';
+
+        // 悬停效果
+        statusToggleButton.addEventListener('mouseenter', function() {
+            statusToggleButton.style.transform = 'scale(1.1)';
+            statusToggleButton.style.boxShadow = '0 6px 20px rgba(255, 107, 53, 0.4)';
+        });
+
+        statusToggleButton.addEventListener('mouseleave', function() {
+            statusToggleButton.style.transform = 'scale(1)';
+            statusToggleButton.style.boxShadow = '0 4px 15px rgba(255, 107, 53, 0.3)';
+        });
+
+        // 创建状态面板 - 更紧凑的设计
+        statusPanel = document.createElement('div');
+        statusPanel.style.cssText = 'position: fixed; background: rgba(42, 40, 39, 0.98); border: 1px solid rgba(255, 107, 53, 0.4); border-radius: 8px; padding: 10px 12px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5); z-index: 9998; color: #ffffff; font-family: "Consolas", "Monaco", monospace; font-size: 11px; width: 200px; max-height: 300px; overflow-y: auto; backdrop-filter: blur(15px); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); opacity: 1; transform: translateX(0); pointer-events: all;';
+
+        statusPanel.innerHTML = '<div style="margin-bottom: 8px; font-weight: bold; color: #ff6b35; border-bottom: 1px solid rgba(255, 107, 53, 0.3); padding-bottom: 6px; font-size: 12px;">📊 操作中心</div><div id="status-content"><div class="status-item clickable-item" onclick="showMdFileSelector()"><span class="status-label">📝 文件:</span><span id="current-file-status">-</span><button class="action-btn" title="选择MD文件">📂</button></div><div class="status-item clickable-item" onclick="showFolderSelector()"><span class="status-label">📁 目录:</span><span id="current-folder-status">-</span><button class="action-btn" title="选择文件夹">📁</button></div><div class="status-item clickable-item" onclick="showMediaSelector()"><span class="status-label">🖼️ 媒体:</span><span id="media-files-status">-</span><button class="action-btn" title="选择媒体文件">🖼️</button></div><div class="status-item"><span class="status-label">⏰ 保存:</span><span id="autosave-status">-</span><button class="action-btn" onclick="setAutoSaveInterval()" title="设置自动保存">⚙️</button></div><div class="status-item"><span class="status-label">🗂️ 初始化 hexo:</span><span id="cache-status">-</span><button class="action-btn" onclick="cleanHexo()" title="hexo clean && hexo generate ">🧹</button></div></div>';
+
+        // 添加状态项样式 - 更紧凑
+        const style = document.createElement('style');
+        style.textContent = `
+            .status-item { 
+                display: flex; 
+                justify-content: space-between; 
+                align-items: center; 
+                margin-bottom: 4px; 
+                padding: 6px 8px; 
+                line-height: 1.3; 
+                border-radius: 6px;
+                transition: all 0.2s ease;
+                cursor: pointer;
+            } 
+            .status-item:last-child { margin-bottom: 0; } 
+            .status-item:hover { 
+                background: rgba(255, 107, 53, 0.1); 
+                transform: translateX(2px);
+            }
+            .clickable-item {
+                border: 1px solid rgba(255, 107, 53, 0.2);
+            }
+            .clickable-item:hover {
+                border-color: rgba(255, 107, 53, 0.4);
+                box-shadow: 0 2px 8px rgba(255, 107, 53, 0.2);
+            }
+            .status-label { 
+                font-weight: 500; 
+                color: #bbb; 
+                font-size: 10px; 
+                min-width: 50px;
+            } 
+            #current-file-status, #current-folder-status, #media-files-status, #autosave-status, #cache-status { 
+                color: #ff6b35; 
+                font-weight: bold; 
+                max-width: 80px; 
+                overflow: hidden; 
+                text-overflow: ellipsis; 
+                white-space: nowrap; 
+                font-size: 11px; 
+                flex: 1;
+                margin: 0 6px;
+            }
+            .action-btn {
+                background: rgba(255, 107, 53, 0.2);
+                border: 1px solid rgba(255, 107, 53, 0.3);
+                color: #ff6b35;
+                cursor: pointer;
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-size: 10px;
+                transition: all 0.2s ease;
+                min-width: 20px;
+                height: 20px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .action-btn:hover {
+                background: rgba(255, 107, 53, 0.3);
+                border-color: rgba(255, 107, 53, 0.5);
+                transform: scale(1.1);
+            }
+        `;
+        document.head.appendChild(style);
+
+        document.body.appendChild(statusToggleButton);
+        document.body.appendChild(statusPanel);
+
+        // 切换面板显示
+        function toggleStatusPanel() {
+            if (statusPanelVisible) {
+                hideStatusPanel();
+            } else {
+                showStatusPanel();
+            }
+        }
+
+        // 显示状态面板
+        function showStatusPanel() {
+            positionStatusPanel();
+            statusPanel.style.opacity = '1';
+            statusPanel.style.transform = 'translateX(0)';
+            statusPanel.style.pointerEvents = 'all';
+            statusToggleButton.innerHTML = '✕';
+            statusToggleButton.title = '关闭状态面板';
+            statusPanelVisible = true;
+            updateStatusPanel();
+        }
+
+        // 隐藏状态面板
+        function hideStatusPanel() {
+            statusPanel.style.opacity = '0';
+            statusPanel.style.transform = 'translateX(100%)';
+            statusPanel.style.pointerEvents = 'none';
+            statusToggleButton.innerHTML = '📊';
+            statusToggleButton.title = '打开状态面板';
+            statusPanelVisible = false;
+        }
+
+        // 定位面板
+        function positionStatusPanel() {
+            const buttonRect = statusToggleButton.getBoundingClientRect();
+            const panelWidth = 280;
+            const panelHeight = 400;
+            
+            let left = buttonRect.left - panelWidth - 10;
+            let top = buttonRect.top;
+            
+            if (left < 10) {
+                left = buttonRect.right + 10;
+            }
+            
+            if (top + panelHeight > window.innerHeight) {
+                top = window.innerHeight - panelHeight - 10;
+            }
+            
+            if (top < 10) {
+                top = 10;
+            }
+            
+            statusPanel.style.left = left + 'px';
+            statusPanel.style.top = top + 'px';
+        }
+
+        // 更新状态面板
+        function updateStatusPanel() {
+            if (!statusPanel) return;
+
+            // 更新当前文件状态
+            const currentFileElement = document.getElementById('current-file-status');
+            if (currentFileElement) {
+                const selectedFile = DOM.mdSelect ? DOM.mdSelect.value : '';
+                currentFileElement.textContent = selectedFile || state.currentFilename || 'cache';
+            }
+
+            // 更新目标文件夹状态
+            const currentFolderElement = document.getElementById('current-folder-status');
+            if (currentFolderElement) {
+                const selectedFolder = DOM.directorySelect ? DOM.directorySelect.value : '';
+                if (selectedFolder) {
+                    currentFolderElement.textContent = selectedFolder;
+                } else if (state.destination) {
+                    const folderName = state.destination.replace(CONFIG.ORIGINAL_DIR, '').replace('/', '');
+                    currentFolderElement.textContent = folderName || 'IMG';
+                } else {
+                    currentFolderElement.textContent = 'IMG';
+                }
+            }
+
+            // 更新媒体文件状态
+            const mediaFilesElement = document.getElementById('media-files-status');
+            if (mediaFilesElement && DOM.imgSelect) {
+                const fileCount = DOM.imgSelect.options.length - 1;
+                mediaFilesElement.textContent = fileCount > 0 ? fileCount + '个文件' : '无文件';
+            }
+
+            // 更新自动保存状态
+            const autosaveElement = document.getElementById('autosave-status');
+            if (autosaveElement) {
+                if (state.autoSaveIntervalSeconds === 0) {
+                    autosaveElement.textContent = '已关闭';
+                } else {
+                    const minutes = Math.floor(state.remainingSeconds / 60);
+                    const seconds = state.remainingSeconds % 60;
+                    autosaveElement.textContent = minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+                }
+            }
+
+            // 更新 hexo 初始化状态
+            const cacheElement = document.getElementById('cache-status');
+            if (cacheElement) {
+                // 不显示文本，让用户直接点击按钮
+                cacheElement.textContent = '';
+                cacheElement.style.color = '#64748b';
+            }
+        }
+
+        // 拖动功能变量
+        let isDragging = false;
+        let dragOffset = { x: 0, y: 0 };
+        let hasDragged = false; // 标记是否发生了实际拖动
+        let dragStartPos = { x: 0, y: 0 }; // 记录拖动开始位置
+
+        // 鼠标按下事件
+        statusToggleButton.addEventListener('mousedown', function(e) {
+            if (e.button === 0) { // 只处理左键
+                isDragging = true;
+                hasDragged = false;
+                
+                const rect = statusToggleButton.getBoundingClientRect();
+                dragOffset.x = e.clientX - rect.left;
+                dragOffset.y = e.clientY - rect.top;
+                
+                // 记录拖动开始位置
+                dragStartPos.x = e.clientX;
+                dragStartPos.y = e.clientY;
+                
+                // 防止文本选择
+                e.preventDefault();
+                
+                // 添加拖动样式
+                statusToggleButton.style.cursor = 'grabbing';
+                statusToggleButton.style.transition = 'none';
+            }
+        });
+
+        // 鼠标移动事件
+        document.addEventListener('mousemove', function(e) {
+            if (isDragging) {
+                // 计算移动距离
+                const moveDistance = Math.sqrt(
+                    Math.pow(e.clientX - dragStartPos.x, 2) + 
+                    Math.pow(e.clientY - dragStartPos.y, 2)
+                );
+                
+                // 如果移动距离超过5像素，认为是拖动操作
+                if (moveDistance > 5) {
+                    hasDragged = true;
+                }
+                
+                const x = e.clientX - dragOffset.x;
+                const y = e.clientY - dragOffset.y;
+                
+                // 限制在视窗范围内
+                const maxX = window.innerWidth - 50;
+                const maxY = window.innerHeight - 50;
+                
+                const constrainedX = Math.max(0, Math.min(x, maxX));
+                const constrainedY = Math.max(0, Math.min(y, maxY));
+                
+                statusToggleButton.style.left = constrainedX + 'px';
+                statusToggleButton.style.top = constrainedY + 'px';
+                statusToggleButton.style.right = 'auto';
+                statusToggleButton.style.bottom = 'auto';
+            }
+        });
+
+        // 鼠标释放事件
+        document.addEventListener('mouseup', function(e) {
+            if (isDragging) {
+                isDragging = false;
+                statusToggleButton.style.cursor = 'move';
+                statusToggleButton.style.transition = 'all 0.3s ease';
+                
+                // 如果发生了拖动，保存位置
+                if (hasDragged) {
+                    const rect = statusToggleButton.getBoundingClientRect();
+                    localStorage.setItem('statusButtonPosition', JSON.stringify({
+                        left: rect.left,
+                        top: rect.top
+                    }));
+                }
+            }
+        });
+
+        // 点击切换面板（只在没有拖动时触发）
+        statusToggleButton.addEventListener('click', function(e) {
+            // 只有在没有发生拖动时才触发面板切换
+            if (!hasDragged) {
+                toggleStatusPanel();
+            }
+            // 重置拖动标记
+            hasDragged = false;
+        });
+
+        // 清除旧的保存位置，使用新的默认位置
+        localStorage.removeItem('statusButtonPosition');
+
+        // 点击外部关闭面板（注释掉自动关闭功能，让用户手动控制）
+        document.addEventListener('click', function(e) {
+            // if (statusPanelVisible && !statusPanel.contains(e.target) && !statusToggleButton.contains(e.target)) {
+            //     hideStatusPanel();
+            // }
+        });
+
+        // 默认展开状态面板
+        setTimeout(() => {
+            showStatusPanel();
+        }, 1000);
+
+        // 监听选择器变化
+        if (DOM.mdSelect) {
+            DOM.mdSelect.addEventListener('change', updateStatusPanel);
+        }
+        if (DOM.directorySelect) {
+            DOM.directorySelect.addEventListener('change', updateStatusPanel);
+        }
+        if (DOM.imgSelect) {
+            const observer = new MutationObserver(updateStatusPanel);
+            observer.observe(DOM.imgSelect, { childList: true });
+        }
+
+        // 开始更新状态
+        updateStatusPanel();
+        setInterval(updateStatusPanel, 1000);
+    }
+    </script>
+</body>
+</html>

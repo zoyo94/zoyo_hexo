@@ -3,12 +3,12 @@
 ## Source: https://github.com/hexojs/hexo/
 
 # Site
-title: Hexo博客
+title: Hexo
 subtitle: ''
-description: 好好学习天天向上
+description: ''
 keywords:
 author: ZOYO
-language: zh-CN
+language: en
 timezone: ''
 
 # URL
@@ -32,6 +32,8 @@ i18n_dir: :lang
 # 跳过需要不需要渲染的文件或路径
 skip_render:
 	- "md_editor/**"
+	- "md-editor-rt/**"
+	- "md-editor-rt-dist/**"
 # Writing
 new_post_name: :title.md # File name of new posts
 default_layout: post

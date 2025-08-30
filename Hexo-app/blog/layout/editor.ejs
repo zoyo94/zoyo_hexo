@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Markdown编辑器 | <%= config.title %></title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/md-editor-rt@2.11.3/lib/style.css">
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        background-color: #f5f5f5;
+        color: #333;
+        line-height: 1.6;
+        height: 100vh;
+      }
+      
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+      
+      h1 {
+        text-align: center;
+        margin-bottom: 20px;
+        color: #333;
+      }
+      
+      #editor-container {
+        flex: 1;
+        min-height: 0;
+      }
+      
+      .button-container {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 20px;
+      }
+      
+      button {
+        padding: 8px 16px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+      }
+      
+      button:hover {
+        background-color: #45a049;
+      }
+      
+      .home-link {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        padding: 5px 10px;
+        background-color: #333;
+        color: white;
+        text-decoration: none;
+        border-radius: 4px;
+      }
+      
+      .home-link:hover {
+        background-color: #555;
+      }
+    </style>
+  </head>
+  <body>
+    <a href="/" class="home-link">返回首页</a>
+    <div class="container">
+      <h1>Markdown编辑器</h1>
+      <div id="editor-container"></div>
+      <div class="button-container">
+        <button id="save-button">保存内容</button>
+        <button id="copy-button">复制内容</button>
+        <button id="export-button">导出为Markdown</button>
+      </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.3.4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/md-editor-rt@2.11.3/lib/md-editor-rt.js"></script>
+    <script>
+      const { createApp } = Vue;
+      const MdEditor = window.MdEditorRt;
+      
+      const app = createApp({
+        data() {
+          return {
+            text: localStorage.getItem('md-content') || '# 欢迎使用 Markdown 编辑器\n\n这是一个基于 md-editor-rt 的编辑器示例。\n\n## 功能特点\n\n- 实时预览\n- 代码高亮\n- 图片上传\n- 表情支持\n- 快捷键支持\n\n```js\nconsole.log("Hello, Markdown!");\n```'
+          }
+        },
+        methods: {
+          saveContent() {
+            localStorage.setItem('md-content', this.text);
+            alert('内容已保存到本地存储！');
+          },
+          copyContent() {
+            navigator.clipboard.writeText(this.text).then(() => {
+              alert('内容已复制到剪贴板！');
+            }).catch(err => {
+              console.error('复制失败: ', err);
+              alert('复制失败，请手动复制。');
+            });
+          },
+          exportMarkdown() {
+            const blob = new Blob([this.text], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'document.md';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          }
+        },
+        mounted() {
+          document.getElementById('save-button').addEventListener('click', this.saveContent);
+          document.getElementById('copy-button').addEventListener('click', this.copyContent);
+          document.getElementById('export-button').addEventListener('click', this.exportMarkdown);
+        },
+        template: `
+          <md-editor 
+            v-model="text" 
+            style="height: 100%"
+            :toolbars="[
+              'bold', 'underline', 'italic', 'strikeThrough', 
+              '-', 'title', 'sub', 'sup', 'quote', 'unorderedList', 
+              'orderedList', '-', 'codeRow', 'code', 'link', 'image', 
+              'table', 'mermaid', 'katex', '-', 'revoke', 'next', 
+              'save', '=', 'pageFullscreen', 'fullscreen', 'preview', 'htmlPreview'
+            ]"
+          />
+        `
+      });
+      
+      app.use(MdEditor);
+      app.mount('#editor-container');
+    </script>
+  </body>
+</html>
