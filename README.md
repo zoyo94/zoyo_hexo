@@ -9,7 +9,7 @@
 
 > 添加了对[imzbf/md-editor-rt](https://github.com/imzbf/md-editor-rt)版本适配。
 
-> 两个版本都能跑，http://xxxx:4000/md-editor-rt/md_editor/、http://xxxx:4000/md-editor-rt/
+> 两个版本都能跑，http://xxxx:4000/md_editor/、http://xxxx:4000/md-editor-rt/
 
 # update:2025-08-30
 
