@@ -2,23 +2,92 @@ const express = require('express');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
+const os = require('os'); // Add os module for temporary file handling
 const cors = require('cors');
 const tar = require('tar');
 const winston = require('winston');
 const { exec, spawn } = require('child_process');
 const FileUtils = require('./utils/file-utils');
 
+/**
+ * 确保 Markdown 文件包含 Hexo 格式的 Front Matter
+ * 如果没有，则自动添加 title 和 date
+ * @param {string} content - Markdown 文件内容
+ * @param {string} filename - 文件名 (e.g., "my-post.md")
+ * @returns {string} 处理后的 Markdown 内容
+ */
+function ensureHexoFrontMatter(content, filename) {
+    const lines = content.split('\n');
+    let hasFrontMatter = false;
+    let frontMatterEndIndex = -1;
+    let frontMatterContent = ''; // 确保 frontMatterContent 始终被定义
+
+    if (lines.length > 0 && lines[0].trim() === '---') {
+        for (let i = 1; i < lines.length; i++) {
+            if (lines[i].trim() === '---') {
+                frontMatterEndIndex = i;
+                hasFrontMatter = true;
+                break;
+            }
+        }
+    }
+
+    // 检查现有 Front Matter 是否包含 Hexo 必需字段
+    let needsNewFrontMatter = true;
+    let allFieldsPresent = false; // 确保 allFieldsPresent 始终被定义
+
+    if (hasFrontMatter && frontMatterEndIndex !== -1) {
+        frontMatterContent = lines.slice(1, frontMatterEndIndex).join('\n'); // 赋值而不是重新声明
+        const requiredFields = ['title:', 'date:', 'categories:', 'tags:'];
+        allFieldsPresent = requiredFields.every(field => frontMatterContent.includes(field));
+        
+        if (allFieldsPresent) {
+            needsNewFrontMatter = false;
+        }
+    }
+
+    logger.info(`[ensureHexoFrontMatter] hasFrontMatter: ${hasFrontMatter}, allFieldsPresent: ${allFieldsPresent}, needsNewFrontMatter: ${needsNewFrontMatter}`);
+    if (hasFrontMatter && frontMatterEndIndex !== -1) {
+        logger.info(`[ensureHexoFrontMatter] Existing front matter content: \n${frontMatterContent}`);
+    }
+
+    if (needsNewFrontMatter) {
+        const title = filename.replace(/\.md$/, '');
+        const date = new Date().toISOString().slice(0, 19).replace('T', ' '); // YYYY-MM-DD HH:mm:ss 格式
+
+        const newFrontMatter = `---
+title: ${title}
+date: ${date}
+categories:
+  - 未分类
+tags:
+  - 未标签
+---
+`;
+        // 如果有旧的 Front Matter，移除它再添加新的
+        if (hasFrontMatter && frontMatterEndIndex !== -1) {
+            return newFrontMatter + lines.slice(frontMatterEndIndex + 1).join('\n');
+        } else {
+            return newFrontMatter + content;
+        }
+    }
+
+    return content;
+}
+
 // 配置常量
 const CONFIG = {
     WORK_DIR: path.join(__dirname, 'public', 'uploads'), // 工作目录
-    HEXO_DIR: path.resolve(__dirname, '../../..'), // Hexo 博客根目录
+    HEXO_DIR: path.resolve(__dirname, '../..'), // Hexo 博客根目录
     PORT: 3001, // 服务监听端口
     MD_FILE_SIZE_LIMIT: 5 * 1024 * 1024, // MD文件大小限制：5MB
     IMG_FILE_SIZE_LIMIT: 50 * 1024 * 1024 // 图片文件大小限制：50MB
 };
 
 // 定义博客文章目录的绝对路径
-const POSTS_DIR = path.resolve(__dirname, '..', '..', '_posts');
+// __dirname 是 /root/Hexo-app-imzbf/blog/source/md_editor
+// Hexo 的 _posts 目录在 /root/Hexo-app-imzbf/blog/source/_posts
+const POSTS_DIR = path.resolve(__dirname, '..', '_posts');
 
 // 初始化工作目录
 process.chdir(CONFIG.WORK_DIR); // 切换到 public/uploads/，保持文件操作路径
@@ -110,14 +179,14 @@ const directoryLogTimestamps = new Map();
 // 清理请求去重机制
 let isCleaningInProgress = false;
 let lastCleanTime = 0;
-const CLEAN_COOLDOWN = 2000; // 2秒冷却时间
+const CLEAN_COOLDOWN = 5000; // 5秒冷却时间
 
 // 自动清理 Hexo 缓存的函数
 const autoCleanHexo = () => {
     return new Promise((resolve, reject) => {
         const now = Date.now();
         
-        // 如果正在清理中或距离上次清理不足10秒，直接返回
+        // 如果正在清理中或距离上次清理不足5秒，直接返回
         if (isCleaningInProgress || (now - lastCleanTime) < CLEAN_COOLDOWN) {
             logger.info('Hexo 清理请求被跳过（正在进行中或冷却期内）');
             return resolve();
@@ -126,27 +195,50 @@ const autoCleanHexo = () => {
         isCleaningInProgress = true;
         lastCleanTime = now;
         
-        // 执行 hexo clean 和 hexo generate
+        logger.info(`开始执行 Hexo clean，工作目录: ${CONFIG.HEXO_DIR}`);
+        
+        // 执行 hexo clean
         const hexoClean = spawn('npx', ['hexo', 'clean'], { 
             cwd: CONFIG.HEXO_DIR,
             stdio: 'pipe'
         });
         
+        // 捕获 hexo clean 的输出
+        hexoClean.stdout.on('data', (data) => {
+            logger.info(`Hexo Clean stdout: ${data.toString().trim()}`);
+        });
+        
+        hexoClean.stderr.on('data', (data) => {
+            logger.warn(`Hexo Clean stderr: ${data.toString().trim()}`);
+        });
+        
         hexoClean.on('close', (cleanCode) => {
+            logger.info(`Hexo clean 进程结束，退出码: ${cleanCode}`);
+            
             if (cleanCode !== 0) {
                 logger.error(`Hexo clean 失败，退出码: ${cleanCode}`);
                 isCleaningInProgress = false;
                 return reject(new Error(`Hexo clean failed with code ${cleanCode}`));
             }
             
-            logger.info('Hexo clean 完成，开始 generate...');
+            logger.info('Hexo clean 完成，开始执行 Hexo generate...');
             
             const hexoGenerate = spawn('npx', ['hexo', 'generate'], { 
                 cwd: CONFIG.HEXO_DIR,
                 stdio: 'pipe'
             });
             
+            // 捕获 hexo generate 的输出
+            hexoGenerate.stdout.on('data', (data) => {
+                logger.info(`Hexo Generate stdout: ${data.toString().trim()}`);
+            });
+            
+            hexoGenerate.stderr.on('data', (data) => {
+                logger.warn(`Hexo Generate stderr: ${data.toString().trim()}`);
+            });
+            
             hexoGenerate.on('close', (generateCode) => {
+                logger.info(`Hexo generate 进程结束，退出码: ${generateCode}`);
                 isCleaningInProgress = false;
                 
                 if (generateCode !== 0) {
@@ -154,7 +246,7 @@ const autoCleanHexo = () => {
                     return reject(new Error(`Hexo generate failed with code ${generateCode}`));
                 }
                 
-                logger.info('Hexo generate 完成');
+                logger.info('Hexo generate 完成，缓存清理和重新生成成功！');
                 resolve();
             });
             
@@ -194,27 +286,32 @@ app.post('/upload', uploadMd.single('md_file'), async (req, res, next) => {
         // 先写入到工作目录（uploads）
         const filePath = path.join(CONFIG.WORK_DIR, finalName);
         await writeFile(filePath, req.file.buffer);
-        logger.info(`MD 文件已上传到缓存: ${originalName} -> ${finalName}`);
+        logger.info(`MD 文件已上传到文章目录: ${originalName} -> ${finalName}`);
         
         // 立即执行保存操作，确保文件真实写入到 _posts 目录
-        const fileContent = req.file.buffer.toString('utf8');
+        let fileContent = req.file.buffer.toString('utf8');
+        
+        // 确保 MD 文件包含 Hexo Front Matter
+        fileContent = ensureHexoFrontMatter(fileContent, finalName);
+
         try {
-            // 模拟保存操作，将文件内容写入到真实的 _posts 目录
+            // 写入到工作目录（uploads），由于软链接，文件会自动出现在 _posts 目录
             await writeFile(filePath, fileContent);
-            logger.info(`MD 文件已保存到磁盘: ${finalName}`);
+            logger.info(`MD 文件已保存到工作目录: ${filePath} (通过软链接同步到 _posts)`);
             
-            // 移除自动清理，改为手动触发或编辑器关闭时触发
             logger.info('MD 文件上传并保存成功');
         } catch (saveError) {
-            logger.warn(`自动保存或清理缓存失败: ${saveError.message}`);
+            logger.warn(`保存 MD 文件失败: ${saveError.message}`);
+            throw saveError; // 重新抛出错误，让 errorHandler 处理
         }
         
         res.json({
             success: true,
             message: 'MD 文件上传并保存成功',
-            filePath,
+            filePath: filePath, 
             filename: finalName,
-            destination: './'
+            destination: './',
+            content: fileContent // 返回处理后的文件内容
         });
     } catch (err) {
         next(err);
@@ -283,6 +380,8 @@ app.post('/upload-folder', uploadImg.array('files'), async (req, res, next) => {
 
         const filePaths = [];
         const filenames = [];
+        let mainMdContent = null; // 初始化为 null
+        let mainMdFilename = null; // 初始化为 null
 
         for (const file of req.files) {
             // 使用 FileUtils 处理文件名
@@ -296,7 +395,25 @@ app.post('/upload-folder', uploadImg.array('files'), async (req, res, next) => {
             await fs.promises.mkdir(dir, { recursive: true }); // 确保目录存在
             logger.info(`确保目录存在: ${getRelativePath(dir)}`);
 
-            await writeFile(fullPath, file.buffer);
+            let fileBuffer = file.buffer;
+            // 如果是 Markdown 文件，则处理 Front Matter
+            if (finalName.endsWith('.md')) {
+                let mdContent = file.buffer.toString('utf8');
+                mdContent = ensureHexoFrontMatter(mdContent, finalName);
+                fileBuffer = Buffer.from(mdContent, 'utf8');
+
+                // 识别主 Markdown 文件：优先选择与文件夹同名的MD文件，否则选择第一个MD文件
+                if (mainMdFilename === null || finalName === `${folderName}.md`) {
+                    mainMdContent = mdContent;
+                    mainMdFilename = finalName;
+                }
+
+                await writeFile(fullPath, fileBuffer); // 写入处理后的MD文件
+                logger.info(`MD 文件已保存到工作目录: ${fullPath} (通过软链接同步到 _posts)`);
+            } else {
+                await writeFile(fullPath, fileBuffer); // 写入非MD文件
+            }
+
             filePaths.push(`${folderName}/${finalName}`);
             filenames.push(finalName);
             logger.info(`文件已上传: ${originalName} -> ${finalName} 到 ${folderName}`);
@@ -310,7 +427,9 @@ app.post('/upload-folder', uploadImg.array('files'), async (req, res, next) => {
             message: '文件夹上传成功',
             filePaths,
             filenames,
-            destination: `./${folderName}/`
+            destination: `./${folderName}/`,
+            mdContent: mainMdContent, // 返回主MD文件的内容
+            mdFilename: mainMdFilename // 返回主MD文件的文件名
         });
     } catch (err) {
         // 出错时也要清除处理状态
@@ -356,23 +475,48 @@ app.get('/directory-tree', async (req, res, next) => {
 
 /**
  * 获取 MD 文件内容
- * POST /get_md
+ * GET /get_md
  */
-app.post('/get_md', noFileUpload.single('file'), async (req, res, next) => {
+// 移除不必要的文件上传中间件，并使用req.query获取参数
+app.get('/get_md', async (req, res, next) => {
     try {
-        const { directory, filename } = req.body;
+        const { directory, filename } = req.query; // 从查询参数获取
         if (!directory || !filename) throw new Error('缺少必要参数: directory 或 filename');
         
         const filePath = path.join(CONFIG.WORK_DIR, directory.replace(/^\.\//, ''), filename);
         
         try {
-            await fs.promises.access(filePath); // 检查文件是否存在
+            await fs.promises.access(filePath);
         } catch (error) {
             throw new Error(`文件不存在或无权限访问: ${filename}`);
         }
         
-        const content = await fs.promises.readFile(filePath, 'utf8');
-        logger.info(`Read MD file: ${getRelativePath(filePath)}`);
+        let content = await fs.promises.readFile(filePath, 'utf8');
+        
+        // 处理视频文件路径：为没有路径的视频文件添加目录前缀
+        // 匹配 <video src="文件名.扩展名" 格式（没有路径的视频）
+        const videoRegex = /<video\s+src="([^\/][^"]*\.(mp4|MP4|avi|AVI|mov|MOV|wmv|WMV|flv|FLV|webm|WEBM))"/g;
+        
+        // 确定目录前缀
+        let dirPrefix = '';
+        if (filename === 'cache') {
+            dirPrefix = './IMG/';
+        } else {
+            // 从文件名中提取标题作为目录名
+            const titleMatch = filename.match(/^(.+)\.md$/);
+            if (titleMatch) {
+                dirPrefix = `./${titleMatch[1]}/`;
+            } else {
+                dirPrefix = './IMG/'; // 默认使用 IMG 目录
+            }
+        }
+        
+        // 替换视频路径
+        content = content.replace(videoRegex, (match, videoFile, ext) => {
+            return match.replace(`src="${videoFile}"`, `src="${dirPrefix}${videoFile}"`);
+        });
+        
+        logger.info(`Read MD file: ${getRelativePath(filePath)}, processed video paths with prefix: ${dirPrefix}`);
         
         res.json({
             success: true,
@@ -414,32 +558,45 @@ app.post('/save_md', noFileUpload.single('file'), async (req, res, next) => {
             if (imageMatches) {
                 for (const match of imageMatches) {
                     const imagePath = match.match(/!\[.*?\]\((.*?)\)/)[1];
-                    
+                    logger.info(imagePath)
                     // 如果是相对路径且不在同名文件夹中
                     if (!imagePath.startsWith('http') && !imagePath.startsWith(baseName + '/')) {
                         const sourceImagePath = path.join(CONFIG.WORK_DIR, destination.replace(/^\.\//, ''), imagePath);
+                        logger.info(`sourceImagePath:${sourceImagePath}`);
                         const imageFileName = path.basename(imagePath);
+                        logger.info(`imageFileName:${ imageFileName}`);
                         const targetImagePath = path.join(imageDir, imageFileName);
+                        logger.info(`targetImagePath:${ targetImagePath}`);
                         
-                        try {
-                            // 检查源文件是否存在
+                        // 检查源文件和目标文件是否为同一个文件
+                        if (path.resolve(sourceImagePath) === path.resolve(targetImagePath)) {
+                            
+                            logger.info(`📍 图片已在目标位置，无需移动: ${imagePath}`);
+                            // 文件已在正确位置，但仍需要更新路径格式
+                            const newImagePath = `${baseName}/${imageFileName}`;
+                            const escapedImagePath = imagePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                            finalContent = finalContent.replace(new RegExp(escapedImagePath, 'g'), newImagePath);
+                        } else {
                             try {
-                                await fs.promises.access(sourceImagePath);
-                                // 移动图片到同名文件夹
+                                await fs.promises.access(sourceImagePath); // 检查源文件是否存在
+                                // 尝试移动文件
                                 await fs.promises.rename(sourceImagePath, targetImagePath);
                                 
-                                // 更新内容中的图片路径（使用全局替换确保所有匹配项都被更新）
+                                // 只有当移动成功时才更新内容中的路径
                                 const newImagePath = `${baseName}/${imageFileName}`;
                                 const escapedImagePath = imagePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                                 finalContent = finalContent.replace(new RegExp(escapedImagePath, 'g'), newImagePath);
                                 
-                                logger.info(`图片已移动并更新路径: ${imagePath} -> ${newImagePath}`);
-                                logger.info(`文件位置: ${getRelativePath(sourceImagePath)} -> ${getRelativePath(targetImagePath)}`);
-                            } catch (accessError) {
-                                logger.warn(`源图片文件不存在或无权限访问: ${getRelativePath(sourceImagePath)}`);
+                                logger.info(`✅ 图片已移动并更新路径: ${imagePath} -> ${newImagePath}`);
+                                logger.info(`   文件位置: ${getRelativePath(sourceImagePath)} -> ${getRelativePath(targetImagePath)}`);
+                            } catch (error) {
+                                if (error.code === 'ENOENT') {
+                                    logger.warn(`⚠️ 源图片文件不存在或无权限访问，跳过移动: ${getRelativePath(sourceImagePath)}`);
+                                } else {
+                                    logger.error(`❌ 移动图片失败: ${error.message}. 源: ${getRelativePath(sourceImagePath)}, 目标: ${getRelativePath(targetImagePath)}`);
+                                }
+                                // 如果移动失败或源文件不存在，不更新 finalContent
                             }
-                        } catch (moveError) {
-                            logger.warn(`移动图片失败: ${moveError.message}`);
                         }
                     }
                 }
@@ -472,28 +629,35 @@ app.post('/save_md', noFileUpload.single('file'), async (req, res, next) => {
                         logger.info(`源路径: ${sourceVideoPath}`);
                         logger.info(`目标路径: ${targetVideoPath}`);
 
-                        try {
-                            // 检查源文件是否存在
+                        // 检查源文件和目标文件是否为同一个文件
+                        if (path.resolve(sourceVideoPath) === path.resolve(targetVideoPath)) {
+                            logger.info(`📍 视频已在目标位置，无需移动: ${videoPath}`);
+                            // 文件已在正确位置，但仍需要更新路径格式
+                            const escapedVideoPath = videoPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                            finalContent = finalContent.replace(new RegExp(`src="${escapedVideoPath}"`, 'g'), `src="${videoFileName}"`);
+                        } else {
                             try {
-                                await fs.promises.access(sourceVideoPath);
-                                logger.info(`源文件存在，准备移动...`);
-                                // 移动视频到同名文件夹
+                                await fs.promises.access(sourceVideoPath); // 检查源文件是否存在
+                                // 尝试移动视频到同名文件夹
                                 await fs.promises.rename(sourceVideoPath, targetVideoPath);
                                 
-                                // 更新内容中的视频路径为 Hexo 需要的格式（只保留文件名）
+                                // 只有当移动成功时才更新内容中的路径
                                 const escapedVideoPath = videoPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                                 finalContent = finalContent.replace(new RegExp(`src="${escapedVideoPath}"`, 'g'), `src="${videoFileName}"`);
                                 
-                                logger.info(`视频已移动并更新路径: ${videoPath} -> ${videoFileName}`);
-                                logger.info(`文件位置: ${getRelativePath(sourceVideoPath)} -> ${getRelativePath(targetVideoPath)}`);
-                            } catch (accessError) {
-                                logger.warn(`源视频文件不存在或无权限访问: ${getRelativePath(sourceVideoPath)}`);
+                                logger.info(`✅ 视频已移动并更新路径: ${videoPath} -> ${videoFileName}`);
+                                logger.info(`   文件位置: ${getRelativePath(sourceVideoPath)} -> ${getRelativePath(targetVideoPath)}`);
+                            } catch (error) {
+                                if (error.code === 'ENOENT') {
+                                    logger.warn(`⚠️ 源视频文件不存在或无权限访问，跳过移动: ${getRelativePath(sourceVideoPath)}`);
+                                } else {
+                                    logger.error(`❌ 移动视频失败: ${error.message}. 源: ${getRelativePath(sourceVideoPath)}, 目标: ${getRelativePath(targetVideoPath)}`);
+                                }
+                                // 如果移动失败或源文件不存在，不更新 finalContent
                             }
-                        } catch (moveError) {
-                            logger.error(`移动视频失败: ${moveError.message}`);
                         }
                     } else {
-                        logger.info(`跳过视频（无需移动）: ${videoPath}`);
+                        logger.info(`跳过视频（已在目标文件夹或为外部链接）: ${videoPath}`);
                     }
                 }
             }
@@ -595,7 +759,7 @@ app.post('/move_image', noFileUpload.single('file'), async (req, res, next) => {
         
         res.json({
             success: true,
-            message: `图片移动成功❤️，已将 ${fileName} 从 ${folderName} 移动至 ${new_folderName}`,
+            message: `图片视频移动成功❤️，已将 ${fileName} 从 ${folderName} 移动至 ${new_folderName}`,
             data: { original_dir, folderName, fileName: fileName, new_folderName }
         });
     } catch (err) {
@@ -713,6 +877,7 @@ app.post('/clean_hexo', noFileUpload.single('file'), async (req, res, next) => {
  * POST /tgz_download
  */
 app.post('/tgz_download', noFileUpload.none(), async (req, res, next) => {
+    let tempMdFileToClean = null; // To store path of temporary MD file
     try {
         const { directoryName, selectedFile, original_dir, markdownContent } = req.body;
         if (!directoryName || !original_dir) throw new Error('缺少必要参数: directoryName 或 original_dir');

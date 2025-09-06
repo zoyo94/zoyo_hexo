@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MD Editor RT</title>
+    <base href="./">
+    <!-- 引入 md-editor-rt 的 CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/md-editor-rt/lib/style.css">
+    <!-- 引入自定义浮窗样式 -->
+    <link rel="stylesheet" href="./css/floating-panels.css">
+    <style>
+        html, body, #root { /* 将 #app 改为 #root */
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden; /* 防止滚动条 */
+            display: flex; /* 新增：设置为flex容器 */
+            flex-direction: column; /* 新增：子元素垂直排列 */
+        }
+        /* 强制 md-editor-rt 组件占据所有可用高度 */
+        .md-editor-rt {
+            flex-grow: 1; /* 允许其填充剩余空间 */
+            display: flex; /* 自身也作为flex容器 */
+            flex-direction: column; /* 内部元素垂直排列 */
+            height: 100% !important; /* 强制高度为100% */
+            min-height: 0 !important; /* 覆盖可能的最小高度限制 */
+        }
+        /* 覆盖 md-editor-rt 库默认的 500px 高度 */
+        .md-editor {
+            height: 100% !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div> <!-- 将 #app 改为 #root -->
+
+    <!-- 引入 React UMD 版本 -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- 引入 md-editor-rt UMD 版本 -->
+    <script src="https://unpkg.com/md-editor-rt/lib/umd/index.js"></script>
+
+    <!-- 定义全局后端地址 -->
+    <script>
+        // 全局后端地址配置
+        window.BACKEND_URL = 'http://' + window.location.hostname + ':3001';
+    </script>
+
+    <!-- 引入管理器和浮窗面板逻辑 -->
+    <script src="./js/managers/cache-manager.js"></script>
+    <script src="./js/managers/file-manager.js"></script>
+    <script src="./js/floating-panels/operations-panel.js"></script>
+    <script src="./js/floating-panels/cache-panel.js"></script>
+    <script src="./js/floating-panels/status-panel.js"></script>
+    <script src="./js/drag-drop-handler.js"></script>
+
+    <!-- 引入主应用逻辑 -->
+    <script src="./js/main.js"></script>
+
+    <script>    
+        // 获取 <base> 元素
+        const baseElement = document.querySelector('base');
+        // 如果 <base> 元素存在，则修改其 href 属性
+        if (baseElement) {
+            baseElement.href = './public/uploads/';
+        }
+    </script>
+
+
+</body>
+</html>

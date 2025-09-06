@@ -50,10 +50,11 @@ class CacheManager {
     }
 
     /**
-     * 获取后端服务器地址 - 使用通用工具类
+     * 获取后端服务器地址
      */
+    // 直接使用全局的 window.BACKEND_URL
     getBackendUrl() {
-        return CommonUtils.getBackendUrl();
+        return window.BACKEND_URL;
     }
 
     /**
@@ -260,10 +261,4 @@ class CacheManager {
     }
 }
 
-// 创建全局缓存管理器实例
-window.cacheManager = new CacheManager();
-
-// 定期清理过期缓存
-setInterval(() => {
-    window.cacheManager.clearExpiredCache();
-}, 10 * 60 * 1000); // 每10分钟清理一次#                                                                                                             
+window.CacheManager = CacheManager;

@@ -32,9 +32,7 @@ class OperationsFloatingPanel {
         this.panel.id = 'operations-floating-panel';
         this.panel.className = 'operations-floating-panel hidden';
         
-        // 添加样式
-        this.addStyles();
-        
+
         // 创建内容
         const content = document.createElement('div');
         content.className = 'operations-content';
@@ -98,7 +96,7 @@ class OperationsFloatingPanel {
             },
             {
                 icon: '🖼️',
-                text: '批量上传图片',
+                text: '批量上传图片/视频',
                 tooltip: '选择多张图片批量上传到服务器',
                 action: 'upload-images'
             },
@@ -148,7 +146,7 @@ class OperationsFloatingPanel {
             {
                 icon: '📤',
                 text: '导出MD文件',
-                tooltip: '将当前内容压缩导出（MD+媒体文件夹）',
+                tooltip: '将当前内容压缩并导出（md 文件+媒体文件夹）',
                 action: 'export'
             }
         ];
@@ -178,8 +176,8 @@ class OperationsFloatingPanel {
     handleAction(action) {
         switch (action) {
             case 'load-md':
-                if (window.loadMdFile) {
-                    window.loadMdFile();
+                if (window.importMdFile) {
+                    window.importMdFile();
                 }
                 break;
             case 'upload-images':
@@ -188,8 +186,8 @@ class OperationsFloatingPanel {
                 }
                 break;
             case 'upload-folder':
-                if (window.loadMdFile) {
-                    window.loadMdFile();
+                if (window.uploadFolder) {
+                    window.uploadFolder();
                 }
                 break;
             case 'create-folder':
@@ -230,6 +228,15 @@ class OperationsFloatingPanel {
         this.toggleBtn.title = '关闭操作面板';
         this.isVisible = true;
         
+        // 设置z-index使其置顶
+        this.panel.style.zIndex = '2147483647'; // 最大z-index
+
+        // 将其他面板的z-index设置为较低值
+        const statusPanel = document.querySelector('.status-floating-panel');
+        if (statusPanel) {
+            statusPanel.style.zIndex = '2147483646';
+        }
+
         // 动态调整面板位置，显示在小浮球旁边
         this.positionPanelNearButton();
     }
@@ -304,221 +311,6 @@ class OperationsFloatingPanel {
         }
     }
 
-    addStyles() {
-        const style = document.createElement('style');
-        style.textContent = `
-            .operations-toggle-btn {
-                position: fixed;
-                bottom: 80px;
-                right: 20px;
-                width: 50px;
-                height: 50px;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 20px;
-                cursor: pointer;
-                box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
-                z-index: 9998;
-                transition: all 0.3s ease;
-                user-select: none;
-            }
-
-            .operations-toggle-btn:hover {
-                transform: scale(1.1);
-                box-shadow: 0 6px 25px rgba(102, 126, 234, 0.6);
-            }
-
-            .operations-floating-panel {
-                position: fixed;
-                width: 240px;
-                max-height: 80vh;
-                background: rgba(255, 255, 255, 0.95);
-                backdrop-filter: blur(10px);
-                border-radius: 12px;
-                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                z-index: 9998;
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                overflow: hidden;
-                transition: all 0.3s ease;
-            }
-
-            .operations-floating-panel.hidden {
-                opacity: 0;
-                transform: translateX(100%);
-                pointer-events: none;
-            }
-
-            .operations-floating-panel.visible {
-                opacity: 1;
-                transform: translateX(0);
-                pointer-events: all;
-            }
-
-            .operations-content {
-                display: flex;
-                flex-direction: column;
-                height: 100%;
-            }
-
-            .operations-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 12px 16px;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-            }
-
-            .operations-title {
-                font-weight: 600;
-                font-size: 14px;
-            }
-
-            .close-btn {
-                background: none;
-                border: none;
-                color: white;
-                cursor: pointer;
-                font-size: 18px;
-                font-weight: bold;
-                padding: 4px 8px;
-                border-radius: 6px;
-                transition: all 0.2s ease;
-            }
-
-            .close-btn:hover {
-                background: rgba(255, 255, 255, 0.2);
-            }
-
-            .operations-main {
-                flex: 1;
-                overflow-y: auto;
-                padding: 12px;
-                max-height: calc(80vh - 60px);
-            }
-
-            .operations-section {
-                margin-bottom: 12px;
-                padding: 10px;
-                background: rgba(248, 250, 252, 0.8);
-                border-radius: 8px;
-                border: 1px solid rgba(226, 232, 240, 0.5);
-            }
-
-            .section-title {
-                font-weight: 600;
-                color: #334155;
-                font-size: 13px;
-                margin-bottom: 12px;
-                padding-bottom: 8px;
-                border-bottom: 1px solid rgba(226, 232, 240, 0.5);
-            }
-
-            .selector-item {
-                margin-bottom: 12px;
-            }
-
-            .selector-label {
-                display: block;
-                color: #64748b;
-                font-size: 12px;
-                font-weight: 500;
-                margin-bottom: 6px;
-            }
-
-            .modern-select {
-                width: 100%;
-                padding: 8px 10px;
-                border: 1px solid rgba(226, 232, 240, 0.8);
-                border-radius: 8px;
-                background: white;
-                color: #1a1a1a;
-                font-size: 12px;
-                transition: all 0.2s ease;
-            }
-
-            .modern-select:focus {
-                outline: none;
-                border-color: #667eea;
-                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-            }
-
-            .operation-btn {
-                width: 100%;
-                padding: 8px 12px;
-                margin-bottom: 6px;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                border: none;
-                border-radius: 8px;
-                font-size: 12px;
-                font-weight: 500;
-                cursor: pointer;
-                transition: all 0.3s ease;
-                display: flex;
-                align-items: center;
-                justify-content: flex-start;
-                gap: 8px;
-            }
-
-            .operation-btn:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-            }
-
-            .operation-btn:active {
-                transform: translateY(0);
-            }
-
-            .operation-btn:last-child {
-                margin-bottom: 0;
-            }
-
-            @media (max-width: 768px) {
-                .operations-floating-panel {
-                    width: 300px;
-                    right: 10px;
-                    top: 60px;
-                }
-                
-                .operations-toggle-btn {
-                    right: 10px;
-                    bottom: 20px;
-                }
-            }
-
-            @media (max-width: 480px) {
-                .operations-floating-panel {
-                    width: calc(100vw - 20px);
-                    right: 10px;
-                    left: 10px;
-                }
-            }
-        `;
-        document.head.appendChild(style);
-    }
 }
 
-// 初始化操作面板
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => {
-        window.operationsPanel = new OperationsFloatingPanel();
-    }, 1000);
-});
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(() => {
-            window.operationsPanel = new OperationsFloatingPanel();
-        }, 1000);
-    });
-} else {
-    setTimeout(() => {
-        window.operationsPanel = new OperationsFloatingPanel();
-    }, 1000);
-}
+window.OperationsFloatingPanel = OperationsFloatingPanel;

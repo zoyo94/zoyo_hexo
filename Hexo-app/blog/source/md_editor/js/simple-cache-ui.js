@@ -6,7 +6,7 @@
 // 等待页面加载完成
 document.addEventListener('DOMContentLoaded', function() {
     // 延迟初始化，确保编辑器已加载
-    setTimeout(initSimpleCacheUI, 2000);
+    setTimeout(initSimpleCacheUI, 1000);
 });
 
 function initSimpleCacheUI() {
@@ -415,7 +415,7 @@ function showToast(message, type = 'info') {
                 toast.parentNode.removeChild(toast);
             }
         }, 300);
-    }, 3000);
+    }, 1000);
 }
 
 // 导出函数供外部调用

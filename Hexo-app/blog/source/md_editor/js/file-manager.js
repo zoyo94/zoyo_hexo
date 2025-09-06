@@ -14,79 +14,31 @@ class FileManager {
     }
 
     /**
-     * 安全化文件名，处理中文和特殊字符
+     * 安全化文件名，处理中文和特殊字符 - 使用通用工具类
      */
     sanitizeFilename(filename) {
-        if (!filename) return '';
-        
-        const lastDotIndex = filename.lastIndexOf('.');
-        const name = lastDotIndex > 0 ? filename.substring(0, lastDotIndex) : filename;
-        const ext = lastDotIndex > 0 ? filename.substring(lastDotIndex) : '';
-        
-        // 处理文件名：替换空格和特殊字符，保留中文
-        let safeName = name
-            .replace(/\s+/g, '_')  // 空格替换为下划线
-            .replace(/[<>:"/\\|?*]/g, '_')  // 替换Windows不允许的字符
-            .replace(/[.]{2,}/g, '_')  // 连续的点替换为下划线
-            .replace(/^[._-]+|[._-]+$/g, '');  // 移除开头和结尾的特殊字符
-        
-        if (!safeName) {
-            safeName = `file_${Date.now()}`;
-        }
-        
-        return safeName + ext;
+        return CommonUtils.sanitizeFilename(filename);
     }
 
     /**
-     * 生成 Markdown 图片链接，处理特殊字符和中文路径
+     * 生成 Markdown 图片链接，处理特殊字符和中文路径 - 使用通用工具类
      */
     generateMarkdownImage(altText, imagePath) {
-        // 对路径进行编码，但保留可读性
-        const encodedPath = imagePath.split('/').map(segment => {
-            // 只对特殊字符进行编码，保留中文字符
-            return encodeURIComponent(segment)
-                .replace(/%2E/g, '.')  // 保留点号
-                .replace(/%2D/g, '-')  // 保留连字符
-                .replace(/%5F/g, '_'); // 保留下划线
-        }).join('/');
-        
-        // 清理 alt 文本，移除可能影响 Markdown 的字符
-        const cleanAltText = altText.replace(/[[\]]/g, '').replace(/[()]/g, '');
-        
-        return `![${cleanAltText}](${encodedPath})`;
+        return CommonUtils.generateMarkdownImage(altText, imagePath);
     }
 
     /**
-     * 检查文件是否存在
+     * 检查文件是否存在 - 使用通用工具类
      */
     async checkFileExists(filePath) {
-        try {
-            const response = await fetch(filePath, { method: 'HEAD' });
-            return response.ok;
-        } catch (error) {
-            return false;
-        }
+        return CommonUtils.checkFileExists(filePath);
     }
 
     /**
-     * 获取后端服务器地址
+     * 获取后端服务器地址 - 使用通用工具类
      */
     getBackendUrl() {
-        const currentHost = window.location.hostname;
-        const currentPort = window.location.port;
-        
-        // 如果当前是4000端口（Hexo），则后端使用3001端口
-        if (currentPort === '4000') {
-            return `http://${currentHost}:3001`;
-        }
-        
-        // 如果直接访问3001端口，则使用相对路径
-        if (currentPort === '3001') {
-            return '';
-        }
-        
-        // 默认使用3001端口
-        return `http://${currentHost}:3001`;
+        return CommonUtils.getBackendUrl();
     }
 
     /**
@@ -127,7 +79,7 @@ class FileManager {
             }
 
             // 添加一个3秒的延迟，以确保编辑器有足够的时间来加载新上传的文件
-            await new Promise(resolve => setTimeout(resolve, 3000));
+            await new Promise(resolve => setTimeout(resolve, 1000));
 
             return data;
         } catch (error) {
@@ -258,15 +210,10 @@ class FileManager {
     }
 
     /**
-     * 读取文件内容
+     * 读取文件内容 - 使用通用工具类
      */
     async readFileContent(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => resolve(e.target.result);
-            reader.onerror = (e) => reject(new Error('文件读取失败'));
-            reader.readAsText(file, 'UTF-8');
-        });
+        return CommonUtils.readFileAsText(file);
     }
 
     /**
@@ -411,6 +358,12 @@ class FileManager {
 
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+
+            // 导出成功后触发自动保存
+            if (window.state && typeof window.autoSave === 'function') {
+                window.state.hasContentChanged = true;
+                window.autoSave();
             }
 
             return response;

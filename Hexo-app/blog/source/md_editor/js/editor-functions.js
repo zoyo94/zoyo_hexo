@@ -112,25 +112,16 @@ async function uploadMdFile(mdFile) {
     const data = await fileManager.uploadFiles([mdFile], '/upload', { key: 'md_file' });
     state.currentFilename = data.filename;
     
-    // 读取文件内容
-    const content = await readFileAsText(mdFile);
-    getContent(data.filename, content);
-    
     return data;
 }
 
 /**
- * 读取文件内容为文本
+ * 读取文件内容为文本 - 使用通用工具类
  * @param {File} file - 要读取的文件
  * @returns {Promise<string>} 文件内容
  */
 function readFileAsText(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = e => resolve(e.target.result);
-        reader.onerror = e => reject(new Error('Failed to read file'));
-        reader.readAsText(file);
-    });
+    return CommonUtils.readFileAsText(file);
 }
 
 /**
@@ -145,6 +136,28 @@ async function uploadSubFiles(subFiles, mdFilename) {
         extraData: { folderName: newFolderName }
     });
     console.log('Folder uploaded successfully:', folderData);
+    
+    // 文件夹上传成功后，手动更新目录选择器
+    if (!Array.from(DOM.directorySelect.options).find(opt => opt.value === newFolderName)) {
+        addOptionToSelect(DOM.directorySelect, newFolderName);
+    }
+    DOM.directorySelect.value = newFolderName;
+    
+    // 更新文件夹选择器显示文本
+    if (window.updateSelectorText) {
+        window.updateSelectorText('directory-select', '文件夹');
+    }
+    
+    // 更新目标路径
+    state.destination = `${CONFIG.ORIGINAL_DIR}${newFolderName}/`;
+    
+    // 更新图片选择器
+    await fetchDirectoryTree(state.destination, DOM.imgSelect, 'file', 'Failed to get IMG files');
+    
+    // 更新图片选择器显示文本
+    if (window.updateSelectorText) {
+        window.updateSelectorText('img-select', '图片/视频文件');
+    }
 }
 
 /**
@@ -167,6 +180,12 @@ async function updateUIAfterMdUpload(data, existingOption) {
     
     // 同步文件夹和图片选择器
     await syncFolderWithMdFile(data.filename);
+    
+    // 上传成功后，从服务器重新读取文件内容
+    // 延迟一下确保文件已经完全写入服务器
+    setTimeout(async () => {
+        await getContent(data.filename);
+    }, 500);
 }
 
 /**
@@ -225,27 +244,13 @@ async function handleImageUpload() {
 }
 
 /**
- * 为上传的文件生成Markdown代码
+ * 为上传的文件生成Markdown代码 - 使用通用工具类
  * @param {string[]} filenames - 文件名数组
  * @param {string} destination - 目标路径
  * @returns {string} 生成的Markdown代码
  */
 function generateMarkdownForFiles(filenames, destination) {
-    let markdown = '';
-    
-    filenames.forEach((filename) => {
-        const fileExt = filename.split('.').pop().toLowerCase();
-        const imagePath = destination.replace('./', '');
-        
-        if (VIDEO_EXTENSIONS.includes(fileExt)) {
-            markdown += `\n<video src=\"/${imagePath}${filename}\" controls=\"controls\" width=\"500\" height=\"300\"></video>\n`;
-        } else {
-            const filenameWithoutExt = filename.split('.')[0];
-            markdown += `\n![${filenameWithoutExt}](/${imagePath}${filename})\n`;
-        }
-    });
-    
-    return markdown;
+    return CommonUtils.generateMarkdownForFiles(filenames, destination);
 }
 
 /**
@@ -385,26 +390,12 @@ async function fetchFileContent(filename) {
 }
 
 /**
- * 生成默认的文件内容
+ * 生成默认的文件内容 - 使用通用工具类
  * @param {string} filename - 文件名
  * @returns {string} 默认内容
  */
 function generateDefaultContent(filename) {
-    // 获取当前时间格式化字符串
-    const currentTime = moment ? moment().format('YYYY-MM-DD HH:mm:ss') : new Date().toISOString();
-    
-    // 根据文件名决定标题
-    const titleName = filename === 'cache' ? filename : filename.replace('.md', '');
-    
-    // 返回默认的文件头部
-    return `---
-title: ${titleName}
-date: ${currentTime}
-categories:
-    - [Category / 分类]
-tags:
-    - Tag / 标签
----`;
+    return CommonUtils.generateDefaultContent(filename);
 }
 
 /**
@@ -657,6 +648,9 @@ async function handleExport() {
         
         // 下载文件
         downloadExportedFile(blob, exportParams.exportFileName);
+        
+        // 导出完成后直接调用手动保存，为的是再次更新 md 文件为 hexo 可读的视频格式
+        await handleManualSave();
         
         // 完成导出
         progressText.textContent = '100%';
@@ -1072,13 +1066,6 @@ async function handleDraggedFiles(files) {
         const mdData = await fileManager.uploadFiles([mdFile], '/upload', { key: 'md_file' });
         state.currentFilename = mdData.filename;
         
-        // 读取文件内容
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            getContent(mdData.filename, e.target.result);
-        };
-        reader.readAsText(mdFile);
-        
         // 更新MD选择器
         const existingMdOption = Array.from(DOM.mdSelect.options).find(opt => opt.value === mdData.filename);
         if (!existingMdOption) {
@@ -1100,10 +1087,37 @@ async function handleDraggedFiles(files) {
                 extraData: { folderName: newFolderName }
             });
             console.log('Folder uploaded successfully:', folderData);
+            
+            // 文件夹上传成功后，手动更新目录选择器
+            if (!Array.from(DOM.directorySelect.options).find(opt => opt.value === newFolderName)) {
+                addOptionToSelect(DOM.directorySelect, newFolderName);
+            }
+            DOM.directorySelect.value = newFolderName;
+            
+            // 更新文件夹选择器显示文本
+            if (window.updateSelectorText) {
+                window.updateSelectorText('directory-select', '文件夹');
+            }
+            
+            // 更新目标路径
+            state.destination = `${CONFIG.ORIGINAL_DIR}${newFolderName}/`;
+            
+            // 更新图片选择器
+            await fetchDirectoryTree(state.destination, DOM.imgSelect, 'file', 'Failed to get IMG files');
+            
+            // 更新图片选择器显示文本
+            if (window.updateSelectorText) {
+                window.updateSelectorText('img-select', '图片/视频文件');
+            }
         }
         
         // 同步文件夹和图片选择器
         await syncFolderWithMdFile(mdData.filename);
+        
+        // 上传成功后，从服务器重新读取文件内容
+        setTimeout(async () => {
+            await getContent(mdData.filename);
+        }, 500);
     }
     
     /**
@@ -1224,52 +1238,33 @@ async function handleDraggedMedia(files, fileType) {
 }
 
 /**
- * 过滤已存在的文件，提示用户是否替换
+ * 过滤已存在的文件，提示用户是否替换 - 使用通用工具类
  * @param {File[]} files - 文件列表
  * @param {string} destination - 目标路径
  * @returns {Promise<File[]>} 过滤后的文件列表
  */
 async function filterExistingFiles(files, destination) {
-    const newFiles = [];
-    for (const file of files) {
-        try {
-            const response = await fetch(`${destination}${file.name}`);
-            if (response.ok && !confirm(`\"${file.name}\" already exists, replace it?`)) continue;
-            newFiles.push(file);
-        } catch {
-            newFiles.push(file);
-        }
-    }
-    return newFiles;
+    return CommonUtils.filterExistingFiles(files, destination);
 }
 
 /**
- * 为视频文件生成Markdown代码
+ * 为视频文件生成Markdown代码 - 使用通用工具类
  * @param {string[]} filenames - 文件名数组
  * @param {string} destination - 目标路径
  * @returns {string} 生成的Markdown代码
  */
 function generateVideoMarkdown(filenames, destination) {
-    let markdown = '';
-    filenames.forEach(filename => {
-        markdown += `<video src="${destination}${filename}" controls="controls" width="500" height="300"></video>\n`;
-    });
-    return markdown;
+    return CommonUtils.generateVideoMarkdown(filenames, destination);
 }
 
 /**
- * 为图片文件生成Markdown代码
+ * 为图片文件生成Markdown代码 - 使用通用工具类
  * @param {string[]} filenames - 文件名数组
  * @param {string} destination - 目标路径
  * @returns {string} 生成的Markdown代码
  */
 function generateImageMarkdown(filenames, destination) {
-    let markdown = '';
-    filenames.forEach(filename => {
-        const filenameWithoutExt = filename.split('.')[0];
-        markdown += `![${filenameWithoutExt}](${destination}${filename})\n`;
-    });
-    return markdown;
+    return CommonUtils.generateImageMarkdown(filenames, destination);
 }
 
 /**
@@ -1307,14 +1302,7 @@ async function handleDraggedMdFiles(mdFiles) {
             // 使用fileManager上传文件，保持一致性
             const data = await fileManager.uploadFiles([mdFile], '/upload', { key: 'md_file' });
             
-            // 读取文件内容
-            const content = await new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
-                reader.readAsText(mdFile);
-            });
-            
-            return { file: mdFile, data, content };
+            return { file: mdFile, data };
         } catch (error) {
             console.error('MD file upload failed:', error);
             alert(`MD 文件 ${filename} 上传失败！`);
@@ -1329,11 +1317,8 @@ async function handleDraggedMdFiles(mdFiles) {
     for (const result of results) {
         if (!result) continue; // 跳过失败或取消的上传
         
-        const { file, data, content } = result;
+        const { file, data } = result;
         state.currentFilename = data.filename;
-        
-        // 更新编辑器内容
-        getContent(data.filename, content);
         
         // 更新MD选择器
         const existingOption = Array.from(DOM.mdSelect.options).find(opt => opt.value === data.filename);
@@ -1350,6 +1335,11 @@ async function handleDraggedMdFiles(mdFiles) {
         
         // 同步文件夹和图片选择器
         await syncFolderWithMdFile(data.filename);
+        
+        // 上传成功后，从服务器重新读取文件内容
+        setTimeout(async () => {
+            await getContent(data.filename);
+        }, 1000);
     }
 }
 
