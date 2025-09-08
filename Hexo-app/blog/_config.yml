@@ -33,7 +33,6 @@ i18n_dir: :lang
 skip_render:
 	- "md_editor/**"
 	- "md-editor-rt/**"
-	- "md-editor-rt-dist/**"
 # Writing
 new_post_name: :title.md # File name of new posts
 default_layout: post

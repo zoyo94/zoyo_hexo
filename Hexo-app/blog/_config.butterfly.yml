@@ -14,6 +14,7 @@ menu:
    标签: /tags/ || fas fa-tags
    类目: /categories/ || fas fa-folder-open
    MDEditor: /md_editor/ || fas fa-brands fa-markdown
+   MDEditor-rt: /md-editor-rt/ || fas fa-brands fa-markdown
    List||fas fa-list:
      Music: /music/ || fas fa-music
      Movie: /movies/ || fas fa-video
