@@ -822,6 +822,7 @@ tags:
                     window.simpleCacheUI.showToast(`❌ 图片上传失败: ${result.message}`, 'error');
                 }
             },
+	    floatingToolbars: ['bold', 'italic', 'strikeThrough', 'title', 'sub', 'sup', 'quote', 'unorderedList', 'orderedList', 'task', 'codeRow', 'code', 'link', 'image', 'table', 'mermaid', 'katex']
             toolbars: [
                 'bold', 'italic', 'underline', 'strikeThrough', 'title', 'sub', 'sup', 'quote', 'unorderedList', 'orderedList', 'task',
                 '-',
