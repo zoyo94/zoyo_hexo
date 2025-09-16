@@ -5,6 +5,10 @@
 3. 涉及到文件名的地方尽量使用英文，中文也行但是爱出现编码问题。最近修复主要是这个问题。
 4. 自己的文档存储在：/Hexo-app/blog/source/_posts
 
+# update:2025-09-16
+> 由于6.0.0 imzbf/md-editor-rt之后不再支持 UMD.
+> 页面相关的 UMD 文件,改为了本地.
+
 # update:2025-09-06
 
 > 添加了对[imzbf/md-editor-rt](https://github.com/imzbf/md-editor-rt)版本适配。
