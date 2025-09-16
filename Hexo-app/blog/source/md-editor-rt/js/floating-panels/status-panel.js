@@ -1,7 +1,7 @@
 const VIDEO_EXTENSIONS = ['mp4', 'webm', 'ogg', 'avi', 'mov', 'wmv', 'flv', 'mkv'];
 const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'];
 
-class StatusFloatingPanel {
+export class StatusFloatingPanel {
     constructor() {
         this.statusPanel = null;
         this.statusToggleButton = null;

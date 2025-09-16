@@ -1,7 +1,7 @@
 /**
  * 缓存管理器 - 解决文件上传缓存问题
  */
-class CacheManager {
+export class CacheManager {
     constructor() {
         this.uploadCache = new Map();
         this.serverFileList = new Set();

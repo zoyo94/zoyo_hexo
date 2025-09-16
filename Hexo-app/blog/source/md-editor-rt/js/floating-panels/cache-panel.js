@@ -3,7 +3,7 @@
  * 专门为MD编辑器设计的轻量级缓存管理界面
  */
 
-class SimpleCacheUI {
+export class SimpleCacheUI {
     constructor() {
         // 创建缓存管理按钮
         this.createCacheButton();

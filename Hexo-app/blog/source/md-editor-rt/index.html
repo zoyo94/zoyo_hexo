@@ -6,9 +6,31 @@
     <title>MD Editor RT</title>
     <base href="./">
     <!-- 引入 md-editor-rt 的 CSS -->
-    <link rel="stylesheet" href="./css/umd/style.css">
+    <link href="https://cdn.jsdelivr.net/npm/md-editor-rt@6.0.1/lib/style.css" rel="stylesheet" />
     <!-- 引入自定义浮窗样式 -->
     <link rel="stylesheet" href="./css/floating-panels.css">
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react",
+          "react-dom": "https://esm.sh/react-dom",
+          "react/jsx-runtime": "https://esm.sh/react/jsx-runtime",
+          "react-dom/client": "https://esm.sh/react-dom/client",
+          "medium-zoom": "https://esm.sh/medium-zoom",
+          "lru-cache": "https://esm.sh/lru-cache",
+          "codemirror": "https://esm.sh/codemirror",
+          "lucide-react": "https://cdn.jsdelivr.net/npm/lucide-react/dist/esm/lucide-react.js",
+          "@vavt/": "https://esm.sh/@vavt/",
+          "@codemirror/": "https://esm.sh/@codemirror/",
+          "@lezer/": "https://esm.sh/@lezer/",
+          "markdown-it": "https://esm.sh/markdown-it",
+          "markdown-it-image-figures": "https://esm.sh/markdown-it-image-figures",
+          "markdown-it-sub": "https://esm.sh/markdown-it-sub",
+          "markdown-it-sup": "https://esm.sh/markdown-it-sup",
+          "md-editor-rt": "https://esm.sh/md-editor-rt@6.0.1"
+        }
+      }
+    </script>
     <style>
         html, body, #root { /* 将 #app 改为 #root */
             margin: 0;
@@ -34,13 +56,7 @@
     </style>
 </head>
 <body>
-    <div id="root"></div> <!-- 将 #app 改为 #root -->
-
-    <!-- 引入 React UMD 版本 -->
-    <script src="./js/umd/react.production.min.js"></script>
-    <script src="./js/umd/react-dom.production.min.js"></script>
-    <!-- 引入 md-editor-rt UMD 版本 -->
-    <script src="./js/umd/index.js"></script>
+    <div id="root"></div>
 
     <!-- 定义全局后端地址 -->
     <script>
@@ -48,16 +64,8 @@
         window.BACKEND_URL = 'http://' + window.location.hostname + ':3001';
     </script>
 
-    <!-- 引入管理器和浮窗面板逻辑 -->
-    <script src="./js/managers/cache-manager.js"></script>
-    <script src="./js/managers/file-manager.js"></script>
-    <script src="./js/floating-panels/operations-panel.js"></script>
-    <script src="./js/floating-panels/cache-panel.js"></script>
-    <script src="./js/floating-panels/status-panel.js"></script>
-    <script src="./js/drag-drop-handler.js"></script>
-
-    <!-- 引入主应用逻辑 -->
-    <script src="./js/main.js"></script>
+    <!-- 主应用逻辑 - ES 模块方式 -->
+    <script type="module" src="./js/main.js"></script>
 
     <script>    
         // 获取 <base> 元素
@@ -67,7 +75,6 @@
             baseElement.href = './public/uploads/';
         }
     </script>
-
 
 </body>
 </html>

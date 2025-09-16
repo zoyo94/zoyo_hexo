@@ -3,7 +3,7 @@
  * 支持图片、视频、MD文件和文件夹的拖拽上传
  */
 
-class DragDropHandler {
+export class DragDropHandler {
     constructor() {
         this.isDragOver = false;
         this.init();

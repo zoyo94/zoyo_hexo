@@ -3,7 +3,7 @@
  * 处理文件上传、编码和特殊字符问题
  */
 
-class FileManager {
+export class FileManager {
     constructor(config) {
         this.config = config;
         this.state = {
@@ -635,7 +635,4 @@ class FileManager {
             throw error;
         }
     }
-
-
 }
-window.FileManager = FileManager;

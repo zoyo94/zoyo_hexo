@@ -1,4 +1,4 @@
-class OperationsFloatingPanel {
+export class OperationsFloatingPanel {
     constructor() {
         this.panel = null;
         this.isVisible = false;
@@ -310,7 +310,4 @@ class OperationsFloatingPanel {
             this.positionPanelNearButton();
         }
     }
-
 }
-
-window.OperationsFloatingPanel = OperationsFloatingPanel;
