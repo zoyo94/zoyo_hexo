@@ -26,14 +26,16 @@ class FileUtils {
         const ext = path.extname(filename);
         let nameWithoutExt = path.basename(filename, ext);
         
-        // 替换特殊字符：点号、括号、其他不安全字符
+        // 替换特殊字符：点号、括号、逗号、其他不安全字符
         const safeName = nameWithoutExt
             .replace(/\./g, '_')               // 点号替换为下划线
             .replace(/[()（）]/g, '_')          // 各种括号替换为下划线
             .replace(/[<>:"/\\|?*[\]{}]/g, '_') // 其他不安全字符
+            .replace(/,/g, '_')                // 逗号替换为下划线
             .replace(/\s+/g, '_')              // 空格替换为下划线
+            .replace(/-{2,}/g, '-')            // 连续短横线合并为单个
             .replace(/_{2,}/g, '_')            // 连续下划线合并为单个
-            .replace(/^_+|_+$/g, '')           // 移除开头和结尾的下划线
+            .replace(/^[_-]+|[_-]+$/g, '')     // 移除开头和结尾的下划线和短横线
             .trim() || 'untitled';             // 如果为空使用默认名称
         
         return safeName + (ext || '.jpg');

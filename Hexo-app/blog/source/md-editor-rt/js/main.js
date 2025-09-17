@@ -3,6 +3,7 @@ import React from 'react';
 import ReactDOMClient from 'react-dom/client';
 import { jsx as _jsx } from 'react/jsx-runtime';
 import { MdEditor, DropdownToolbar } from 'md-editor-rt';
+import { ExportPDF } from '@vavt/rt-extension';
 
 // 导入自定义模块
 import { FileManager } from './managers/file-manager.js';
@@ -29,6 +30,7 @@ if (window.mdEditorRtAppInitialized) {
         autoSaveIntervalSeconds: 3600, // 默认1小时自动保存
         remainingSeconds: 3600,
         autoSaveIntervalId: null,
+        countdownIntervalId: null, // 倒计时更新器ID
         hasContentChanged: false,
         // 其他可能的状态，根据需要添加
     };
@@ -822,13 +824,13 @@ tags:
                     window.simpleCacheUI.showToast(`❌ 图片上传失败: ${result.message}`, 'error');
                 }
             },
-	    floatingToolbars: ['bold', 'italic', 'strikeThrough', 'title', 'sub', 'sup', 'quote', 'unorderedList', 'orderedList', 'task', 'codeRow', 'code', 'link', 'image', 'table', 'mermaid', 'katex'],
+            floatingToolbars: ['bold', 'italic', 'strikeThrough', 'title', 'sub', 'sup', 'quote', 'unorderedList', 'orderedList', 'task', 'codeRow', 'code', 'link', 'image', 'table', 'mermaid', 'katex'],
             toolbars: [
                 'bold', 'italic', 'underline', 'strikeThrough', 'title', 'sub', 'sup', 'quote', 'unorderedList', 'orderedList', 'task',
                 '-',
                 'codeRow', 'code', 'link', 'image', 'table', 'mermaid', 'katex', 
                 '-',
-                'revoke', 'next', 'save', 
+                'revoke', 'next', 'save', 5,
                 '=',
                 0, 1, 2, 3, 4, // 自定义工具栏按钮
                 '-',
@@ -846,6 +848,7 @@ tags:
                     title: '主题',
                     closeAfterSelect: true
                 }),
+                React.createElement(ExportPDF, { key: 'export-pdf', value: text }),
             ],
             footers: ['markdownTotal', '=', 'scrollSwitch', 0], // 移除自定义字数统计
             defFooters: [
@@ -875,8 +878,22 @@ tags:
             window.state.autoSaveIntervalId = setInterval(autoSave, window.state.autoSaveIntervalSeconds * 1000);
         }
         
-        // 启动倒计时更新
-        setInterval(updateAutoSaveCountdown, 1000);
+        // 启动倒计时更新器
+        const startCountdown = () => {
+            // 清除旧的倒计时更新器（如果存在）
+            if (window.state.countdownIntervalId) {
+                clearInterval(window.state.countdownIntervalId);
+            }
+            
+            // 启动新的倒计时更新器并保存ID
+            window.state.countdownIntervalId = setInterval(updateAutoSaveCountdown, 1000);
+            
+            // 立即更新一次显示
+            updateAutoSaveCountdown();
+        };
+        
+        // 延迟启动，确保DOM完全加载
+        setTimeout(startCountdown, 500);
         
         // 监听编辑器内容变化
         setupContentChangeListener();
@@ -929,6 +946,12 @@ tags:
                 }
                 window.state.autoSaveIntervalId = setInterval(autoSave, newInterval * 1000);
                 
+                // 重新启动倒计时更新器
+                if (window.state.countdownIntervalId) {
+                    clearInterval(window.state.countdownIntervalId);
+                }
+                window.state.countdownIntervalId = setInterval(updateAutoSaveCountdown, 1000);
+                
                 // 保存到localStorage
                 localStorage.setItem('autoSaveInterval', newInterval.toString());
                 
@@ -941,6 +964,12 @@ tags:
                 if (window.state.autoSaveIntervalId) {
                     clearInterval(window.state.autoSaveIntervalId);
                     window.state.autoSaveIntervalId = null;
+                }
+                
+                // 停止倒计时更新器
+                if (window.state.countdownIntervalId) {
+                    clearInterval(window.state.countdownIntervalId);
+                    window.state.countdownIntervalId = null;
                 }
                 
                 localStorage.setItem('autoSaveInterval', '0');

@@ -14,29 +14,6 @@ export class FileManager {
         this.ongoingFetches = new Map(); // 用于存储正在进行的 fetch 请求，防止重复
     }
 
-    /**
-     * 安全化文件名，处理中文和特殊字符
-     */
-    sanitizeFilename(filename) {
-        if (!filename) return '';
-        
-        const lastDotIndex = filename.lastIndexOf('.');
-        const name = lastDotIndex > 0 ? filename.substring(0, lastDotIndex) : filename;
-        const ext = lastDotIndex > 0 ? filename.substring(lastDotIndex) : '';
-        
-        // 处理文件名：替换空格和特殊字符，保留中文
-        let safeName = name
-            .replace(/\\s+/g, '_')  // 空格替换为下划线
-            .replace(/[<>:"/\\|?*]/g, '_')  // 替换Windows不允许的字符
-            .replace(/[.]{2,}/g, '_')  // 连续的点替换为下划线
-            .replace(/^[._-]+|[._-]+$/g, '');  // 移除开头和结尾的特殊字符
-        
-        if (!safeName) {
-            safeName = `file_${Date.now()}`;
-        }
-        
-        return safeName + ext;
-    }
 
     /**
      * 生成 Markdown 图片链接，处理特殊字符和中文路径
