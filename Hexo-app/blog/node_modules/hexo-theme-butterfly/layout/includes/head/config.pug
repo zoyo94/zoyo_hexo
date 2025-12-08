@@ -10,7 +10,6 @@
       hitsPerPage: theme.search.algolia_search.hitsPerPage,
       // search languages
       languages: {
-        input_placeholder: theme.search.placeholder || _p("search.input_placeholder"),
         hits_empty: _p("search.algolia_search.hits_empty"),
         hits_stats: _p("search.algolia_search.hits_stats"),
       }
@@ -19,12 +18,16 @@
 
   let localSearch = 'undefined'
   if (theme.search.use === 'local_search') {
-    const { CDN, preload, top_n_per_article, unescape } = theme.search.local_search
+    const { CDN, preload, top_n_per_article, pagination, unescape } = theme.search.local_search
     localSearch = JSON.stringify({
       path: CDN || config.root + config.search.path,
       preload,
       top_n_per_article,
       unescape,
+      pagination: {
+        enable: pagination.enable,
+        hitsPerPage: pagination.hitsPerPage
+      },
       languages: {
         // search languages
         hits_empty: _p("search.local_search.hits_empty"),

@@ -49,6 +49,7 @@ search:
 pagination:
   prev: 上一篇
   next: 下一篇
+  page_info: '第 ${current} 页 / 共 ${total} 页'
 
 comment: 评论
 

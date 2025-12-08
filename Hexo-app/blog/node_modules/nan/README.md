@@ -1,9 +1,9 @@
 Native Abstractions for Node.js
 ===============================
 
-**A header file filled with macro and utility goodness for making add-on development for Node.js easier across versions 8, 10, 12, 14, 16, 17, 18, 19, 20, 21, 22, 23 and 24.**
+**A header file filled with macro and utility goodness for making add-on development for Node.js easier across versions 8, 10, 12, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24 and 25.**
 
-***Current version: 2.23.0***
+***Current version: 2.24.0***
 
 *(See [CHANGELOG.md](https://github.com/nodejs/nan/blob/master/CHANGELOG.md) for complete ChangeLog)*
 
@@ -272,6 +272,7 @@ Miscellaneous string & byte encoding and decoding functionality provided for com
 
  - <a href="doc/string_bytes.md#api_nan_encoding"><b><code>Nan::Encoding</code></b></a>
  - <a href="doc/string_bytes.md#api_nan_encode"><b><code>Nan::Encode()</code></b></a>
+ - <a href="doc/string_bytes.md#api_nan_try_encode"><b><code>Nan::TryEncode()</code></b></a>
  - <a href="doc/string_bytes.md#api_nan_decode_bytes"><b><code>Nan::DecodeBytes()</code></b></a>
  - <a href="doc/string_bytes.md#api_nan_decode_write"><b><code>Nan::DecodeWrite()</code></b></a>
 

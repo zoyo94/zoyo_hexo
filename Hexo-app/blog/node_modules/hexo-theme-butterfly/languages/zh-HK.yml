@@ -48,6 +48,7 @@ search:
 pagination:
   prev: 上一頁
   next: 下一頁
+  page_info: '第 ${current} 頁 / 共 ${total} 頁'
 
 comment: 評論
 

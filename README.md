@@ -6,6 +6,12 @@
 4. 自己的文档存储在：/Hexo-app/blog/source/_posts
 5. 可拖拽上传,图片|视频|md 文件|md 文件夹
 
+# update:2025-12-08
+
+> butterfly5.4.3升级5.5.2
+
+> md-editor-rt 6.0.1升级到最新6.2.0 CSS改为本地文件
+
 # update:2025-09-17
 
 > md-editor-rt添加了pdf导出按钮及功能

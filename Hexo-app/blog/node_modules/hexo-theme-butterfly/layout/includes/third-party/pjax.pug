@@ -29,7 +29,13 @@ script.
 
     const triggerPjaxFn = (val) => {
       if (!val) return
-      Object.values(val).forEach(fn => fn())
+      Object.values(val).forEach(fn => {
+        try {
+          fn()
+        } catch (err) {
+          console.debug('Pjax callback failed:', err)
+        }
+      })
     }
 
     document.addEventListener('pjax:send', () => {

@@ -13,7 +13,7 @@ hexo.extend.helper.register('postDesc', data => {
 
 hexo.extend.helper.register('cloudTags', function (options = {}) {
   const env = this
-  let { source, minfontsize, maxfontsize, limit, unit = 'px', orderby, order } = options
+  let { source, minfontsize, maxfontsize, limit, unit = 'px', orderby, order, page = 'tags' } = options
 
   if (limit > 0) {
     source = source.limit(limit)
@@ -29,14 +29,19 @@ hexo.extend.helper.register('cloudTags', function (options = {}) {
     return `rgb(${Math.max(r, 50)}, ${Math.max(g, 50)}, ${Math.max(b, 50)})`
   }
 
-  const generateStyle = (size, unit) =>
-    `font-size: ${parseFloat(size.toFixed(2)) + unit}; color: ${getRandomColor()};`
+  const generateStyle = (size, unit, page) => {
+    if (page === 'tags') {
+      return `font-size: ${parseFloat(size.toFixed(2)) + unit}; background-color: ${getRandomColor()};`
+    } else {
+      return `font-size: ${parseFloat(size.toFixed(2)) + unit}; color: ${getRandomColor()};`
+    }
+  }
 
   const length = sizes.length - 1
   const result = source.sort(orderby, order).map(tag => {
     const ratio = length ? sizes.indexOf(tag.length) / length : 0
     const size = minfontsize + ((maxfontsize - minfontsize) * ratio)
-    const style = generateStyle(size, unit)
+    const style = generateStyle(size, unit, page)
     return `<a href="${env.url_for(tag.path)}" style="${style}">${tag.name}</a>`
   }).join('')
 
@@ -48,7 +53,7 @@ hexo.extend.helper.register('urlNoIndex', function (url = null, trailingIndex = 
 })
 
 hexo.extend.helper.register('md5', function (path) {
-  return crypto.createHash('md5').update(decodeURI(this.url_for(path))).digest('hex')
+  return crypto.createHash('md5').update(decodeURI(this.url_for(path, { relative: false }))).digest('hex')
 })
 
 hexo.extend.helper.register('injectHtml', data => {
@@ -65,7 +70,7 @@ hexo.extend.helper.register('findArchivesTitle', function (page, menu, date) {
   const defaultTitle = this._p('page.archives')
   if (!menu) return defaultTitle
 
-  const loop = (m) => {
+  const loop = m => {
     for (const key in m) {
       if (typeof m[key] === 'object') {
         const result = loop(m[key])
@@ -81,7 +86,7 @@ hexo.extend.helper.register('findArchivesTitle', function (page, menu, date) {
   return loop(menu) || defaultTitle
 })
 
-hexo.extend.helper.register('getBgPath', function(path) {
+hexo.extend.helper.register('getBgPath', function (path) {
   if (!path) return ''
 
   const absoluteUrlPattern = /^(?:[a-z][a-z\d+.-]*:)?\/\//i
@@ -127,6 +132,8 @@ hexo.extend.helper.register('shuoshuoFN', (data, page) => {
   finalResult.forEach(item => {
     const utcDate = moment.utc(item.date).format('YYYY-MM-DD HH:mm:ss')
     item.date = moment.tz(utcDate, hexo.config.timezone).format('YYYY-MM-DD HH:mm:ss')
+    // markdown
+    item.content = hexo.render.renderSync({ text: item.content, engine: 'markdown' })
   })
 
   return finalResult
@@ -149,4 +156,13 @@ hexo.extend.helper.register('getPageType', (page, isHome) => {
 hexo.extend.helper.register('getVersion', () => {
   const { version } = require('../../package.json')
   return { hexo: hexo.version, theme: version }
+})
+
+hexo.extend.helper.register('safeJSON', data => {
+  // Safely serialize JSON for embedding in <script> tags
+  return JSON.stringify(data)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029')
 })

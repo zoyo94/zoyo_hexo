@@ -37,7 +37,7 @@ const score = (args, content) => {
   try {
     paramsObj = JSON.parse(paramPart)
   } catch (e) {
-    console.error("Failed to parse JSON in score tag:", e)
+    console.error('Failed to parse JSON in score tag:', e)
   }
 
   // Use double quotes for data-params attribute value,
@@ -47,4 +47,4 @@ const score = (args, content) => {
   </div>`
 }
 
-hexo.extend.tag.register("score", score, { ends: true })
+hexo.extend.tag.register('score', score, { ends: true })
