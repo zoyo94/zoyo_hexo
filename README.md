@@ -6,6 +6,12 @@
 4. 自己的文档存储在：/Hexo-app/blog/source/_posts
 5. 可拖拽上传,图片|视频|md 文件|md 文件夹
 
+# update:2026-02-04
+
+> md_editor的cache缓存不清空的情况修复
+
+> md-editor-rt的ExportPDF.css本地加载,减少外部获取不到的风险
+
 # update:2025-12-08
 
 > butterfly5.4.3升级5.5.2
