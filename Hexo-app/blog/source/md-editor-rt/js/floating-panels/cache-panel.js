@@ -38,6 +38,7 @@ export class SimpleCacheUI {
 
 
         const refreshBtn = document.createElement('button');
+        refreshBtn.id = 'cache-quick-refresh-btn';
         refreshBtn.innerHTML = '🔄';
         refreshBtn.title = '刷新缓存';
 
@@ -94,7 +95,16 @@ export class SimpleCacheUI {
 
         // 定期更新状态
         this.updateStatusIndicator();
-        setInterval(() => this.updateStatusIndicator(), 30000); // 每30秒更新一次
+        this.startIndicatorTimer();
+    }
+
+    startIndicatorTimer() {
+        if (this.indicatorTimer) clearInterval(this.indicatorTimer);
+        this.indicatorTimer = setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                this.updateStatusIndicator();
+            }
+        }, 30000);
     }
 
     updateStatusIndicator() {
@@ -106,7 +116,6 @@ export class SimpleCacheUI {
         if (!statusIcon || !statusText) return;
 
         const cacheCount = window.cacheManager.uploadCache.size;
-        const serverCount = window.cacheManager.serverFileList.size;
 
         if (cacheCount === 0) {
             statusIcon.innerHTML = '🟢';
@@ -225,20 +234,35 @@ export class SimpleCacheUI {
     }
 
     async quickRefreshCache() {
-        const btn = document.getElementById('quick-refresh-btn');
-        let originalText = '🔄';
+        await this._performRefresh('cache-quick-refresh-btn', false);
+    }
+
+    async refreshCacheStatus() {
+        await this._performRefresh('refresh-cache-btn', true);
+    }
+
+    /**
+     * 统一刷新逻辑
+     * @param {string} btnId 触发按钮ID
+     * @param {boolean} isFullUI 是否为完整面板更新
+     */
+    async _performRefresh(btnId, isFullUI) {
+        const btn = document.getElementById(btnId);
+        const originalText = btn ? btn.innerHTML : null;
         
-        // 安全地获取原始文本
-        if (btn && btn.innerHTML) {
-            originalText = btn.innerHTML;
-            btn.innerHTML = '⏳';
+        if (btn) {
+            btn.innerHTML = isFullUI ? '⏳ 刷新中...' : '⏳';
+            btn.disabled = true;
         }
         
         try {
             if (window.cacheManager) {
                 window.cacheManager.clearExpiredCache();
                 await window.cacheManager.syncServerFileList();
-                this.updateStatusIndicator(); // 更新状态指示器
+                
+                this.updateStatusIndicator();
+                if (isFullUI) this.updateCacheStatus();
+                
                 this.showToast('✅ 缓存状态已刷新', 'success');
             } else {
                 this.showToast('❌ 缓存管理器未初始化', 'error');
@@ -247,39 +271,7 @@ export class SimpleCacheUI {
             console.error('Cache refresh error:', error);
             this.showToast('❌ 刷新失败: ' + error.message, 'error');
         } finally {
-            // 安全地恢复按钮状态
-            if (btn && btn.innerHTML !== undefined) {
-                btn.innerHTML = originalText;
-            }
-        }
-    }
-
-    async refreshCacheStatus() {
-        const btn = document.getElementById('refresh-cache-btn');
-        let originalText = '🔄 刷新状态';
-        
-        // 安全地获取原始文本和设置状态
-        if (btn && btn.innerHTML) {
-            originalText = btn.innerHTML;
-            btn.innerHTML = '⏳ 刷新中...';
-            btn.disabled = true;
-        }
-        
-        try {
-            if (window.cacheManager) {
-                window.cacheManager.clearExpiredCache();
-                await window.cacheManager.syncServerFileList();
-                this.updateCacheStatus();
-                this.showToast('✅ 状态刷新成功', 'success');
-            } else {
-                this.showToast('❌ 缓存管理器未初始化', 'error');
-            }
-        } catch (error) {
-            console.error('Cache status refresh error:', error);
-            this.showToast('❌ 刷新失败: ' + error.message, 'error');
-        } finally {
-            // 安全地恢复按钮状态
-            if (btn && btn.innerHTML !== undefined) {
+            if (btn) {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
             }

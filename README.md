@@ -1,104 +1,56 @@
-**这里着重说明一下：**
+# 🚀 Zoyo-Hexo：深度集成的 Markdown 编辑全能系统
 
-1. 上传文件夹的时候子文件夹里面的文件夹名和md文件名一致，子文件夹里面包含图像文件
-2. 上传图片可以多选
-3. 涉及到文件名的地方尽量使用英文，中文也行但是爱出现编码问题。最近修复主要是这个问题。
-4. 自己的文档存储在：/Hexo-app/blog/source/_posts
-5. 可拖拽上传,图片|视频|md 文件|md 文件夹
+[![GitHub stars](https://img.shields.io/github/stars/zoyo94/zoyo_hexo?style=flat-square&logo=github)](https://github.com/zoyo94/zoyo_hexo)
+[![Docker Pulls](https://img.shields.io/docker/pulls/zoyo94/zoyo_hexo?style=flat-square&logo=docker)](https://hub.docker.com/r/zoyo94/zoyo_hexo)
+[![Language](https://img.shields.io/github/languages/top/zoyo94/zoyo_hexo?style=flat-square)](https://github.com/zoyo94/zoyo_hexo)
+[![Node version](https://img.shields.io/badge/Node.js-%3E%3D%2014.0.0-green?style=flat-square&logo=node.js)](https://nodejs.org)
 
-# update:2026-02-04
+**Zoyo-Hexo** 是一个专为 Hexo 打造的深度集成创作方案。它打破了传统 Hexo 本地编辑的碎片化体验，将强大的 Markdown 编辑器（双版本支持）与 Node.js 安全后端完美结合，为您提供类似 CMS 的丝滑写作体验。
 
-> md_editor的cache缓存不清空的情况修复
+### ✨ 系统核心亮点
+- **🗂️ 深度集成**: 在 Hexo 博客中直接开启编辑模式，实时保存同步，改动立现。
+- **📂 智能迁移**: 独创“原子级”保存机制，重命名文章时自动迁移关联图片文件夹，告别冗余垃圾文件。
+- **🛡️ 企业级安全性**: 经过## 📅 更新日志 (Recent Updates)
 
-> md-editor-rt的ExportPDF.css本地加载,减少外部获取不到的风险
+<details open>
+<summary><b>🚀 2026-04-01: 后端安全与架构闭环 (Antigravity 深度重构)</b></summary>
 
-# update:2025-12-08
+- **可视化面板上线**：后端访问 `http://localhost:3001/` 即可进入全接口交互式文档与服务器实时监控面板。
+- **启动器自检升级**：`start.js` 现支持 Dashboard 日志展示与 PID 强力销毁机制，解决僵尸进程困扰。
+- **路径安全锁**：防御所有目录遍历攻击，接口调用全流程通过 `validateSafePath` 审计。
+- **资产原子迁移**：重命名 MD 文件后，自动迁移其伴生资源文件夹，并执行 Hexo 逻辑清理。
+- **底层流式存储**：全量迁移至 `Multer DiskStorage` 模式，极大降低了大规模上传时的服务器内存占用。
+</details>
 
-> butterfly5.4.3升级5.5.2
+<details>
+<summary>历史更新记录</summary>
 
-> md-editor-rt 6.0.1升级到最新6.2.0 CSS改为本地文件
+- **2025-12-08**: Butterfly 主题升级 (5.5.2)；MD-Editor-RT 升级 (6.2.0)。
+- **2025-09-17**: 为 MD-Editor-RT 引入 PDF 实时导出功能。
+- **2025-08-30**: 增加拖拽上传支持；引入 PM2 进程守护。
+- **2024-06-17**: 重构 Hexo 启动链路，实现单命令一键部署。
+- **早期版本**: 完成了 Editor.md 的深层整合及多平台容器化映射逻辑。
+</details>
 
-# update:2025-09-17
+---
 
-> md-editor-rt添加了pdf导出按钮及功能
+## ⚡ 快速部署 (Quick Start)
 
-# update:2025-09-16++
+### 1. 🐳 Docker 部署 (推荐)
+支持 X86 与 ARM64 (v8) 架构一键上线：
 
-> md-editor-rt 5.8.4升级到最新 6.0.1
-
-> 从 UMD 切换到 CDN 示例的ES模块化代码.
-
-# update:2025-09-16
-
-> 由于6.0.0 imzbf/md-editor-rt之后不再支持 UMD.
-
-> 页面相关的 UMD 文件,改为了本地.
-
-# update:2025-09-06
-
-> 添加了对[imzbf/md-editor-rt](https://github.com/imzbf/md-editor-rt)版本适配。
-
-> 两个版本都能跑，http://xxxx:4000/md_editor/、http://xxxx:4000/md-editor-rt/
-
-# update:2025-08-30
-
-> 更新了代码，交互逻辑，UI，以及修复BUG。
-
-> 可拖拽上传 md、图片、视频文件
-
-> 使用pm2 启动应用
-
-# update:2025-04-04
-
-> 反正就是修复了一些内容懒得写
-
-> 加了一个自动保存倒计时
-
-> butterfly: 5.3.3升级5.3.5
-
-# update:2025-2-22
-
-> 使用Grok3优化了一下代码：
-> 优化了CSS样式，全部代码重新润色。
-
-> butterfly: 4.13.0升级5.3.3
-
-> hexo: 7.2升级7.3.0
-
-# update:2024-6-17
-> 添加hexo s默认启动无需再手动启动。
-
-> 启动没有那么快，可以执行screen -r hexo 查看是否加载完成，再访问页面。
-
-# update:2024-6-14
-> 修复手动保存问题。
-
-> butterfly: 4.12.0升级4.13.0
-
-> hexo: 7.1.1升级7.2.0
-
-> 后续自己使用npm升级hexo、butterfly
-
-# update:2024-5-6
-> 修复上传md文件名乱码
-
-# update:2024-2-20
-> butterfly: 4.8.5升级4.12.0
-
-> hexo: 7.0.0升级7.1.1
-------------------------
-### 1、启动容器。
-##### X86平台
-`docker run -d -p 4000:4000 -p 3001:3001 --name hexo zoyo94/zoyo_hexo:latest sh -c "pm2 start ecosystem.config.js && while true; do sleep 30; done"`
-##### ARM64_v8平台
-`docker run -d -p 4000:4000 -p 3001:3001 --name hexo zoyo94/zoyo_hexo:latest sh -c "pm2 start ecosystem.config.js && while true; do sleep 30; done"`
-
-##### docker-compose.yml
+```bash
+docker run -d \
+  -p 4000:4000 -p 3001:3001 \
+  --name zoyo_hexo \
+  zoyo94/zoyo_hexo:latest \
+  sh -c "pm2 start ecosystem.config.js && tail -f /dev/null"
 ```
-name: hera
+
+#### Docker Compose 配置：
+```yaml
 services:
     zoyo_hexo:
-        platform: linux/arm64/v8
         stdin_open: true
         tty: true
         ports:
@@ -111,65 +63,35 @@ services:
             - ./MD_files:/Hexo-app/blog/source/_posts
         image: zoyo94/zoyo_hexo:latest
         command: ["sh", "-c", "pm2 start ecosystem.config.js && while true; do sleep 30; done"]
-   
 ```
 
-> 前端端口：4000
+### 2. 💻 本地运行 (开发者模式)
+在博客根目录完成依赖安装后，运行自举启动器：
 
-> 后端端口：3001
+```bash
+node start.js
+```
+启动后终端将展示精美的监控面板，展示 Hexo 与后端实时状态。
 
-### 2、访问使用：http://ip:4000/
+---
 
-### 3、包换hexo、butterfly主题、editor.md、zsh、debian中文环境。
+## 📖 核心访问指南
 
-### 4、添加了自己的一些功能，hexo大概其没改变，主要是hexo整合editor.md直接在网页编辑自己hexo的内容。
+| 模块 | 访问地址 | 功能描述 |
+| :--- | :--- | :--- |
+| **博客首页** | `http://localhost:4000` | Hexo 静态内容展示。 |
+| **Markdown 编辑器** | `http://localhost:4000/md_editor/` | 实时协作与内容生产平台。 |
+| **后端看板 (NEW)** | `http://localhost:3001/` | **接口文档与服务器监控中心**。 |
 
-### 5、editor.md添加了:
-1. 上传图片、
-2. 上传md文件、
-3. 上传视频、
-4. 手动保存编辑器内容、
-5. 自动保存编辑器内容、
-6. tgz压缩导出md文件以及相关联图片文件夹。
+---
 
-#### 6、这些后端功能写于文件：/Hexo-app/blog/source/md_editor/app.js
+## 🛠️ 管理说明
 
-#### 7、 进入容器中
-`docker exec -it 容器名字 zsh`
+- **进程守护**: 容器内默认使用 PM2。运行 `docker exec -it hexo pm2 list` 检查服务状态。
+- **最佳实践**: 建议文件名使用英文或下划线以获得最佳兼容性。
+- **备份导出**: 通过编辑器顶部的“导出”按钮，可将文章连同相关图片一键打包为 `.tgz` 文件。
 
-`cd /Hexo-app/blog`
+---
 
-### 8、使用 pm2 启动(默认启动状态)
-` pm2 list `
-
-` pm2 start all `
-
-` pm2 stop all `
-
-### 8、启动后端写了一个启动命令(默认启动状态不用操作)：~
-
-#### 8.1启动：~
-~`service appjs start`~
-#### 8.2停止：~
-~`service appjs stop`~
-
-### 9、启用hexo s（默认启动状态不用操作）~
-
-#### 这里给一个建议使用screen另外起一个会话运行启动，再使用ctr+a+d保持退出会话。~
-
-#### 9.1 创建hexo screen名字随便，自己记得就行。~
-
-~`screen -S hexo`~
-
-~`cd /Hexo-app/blog`~
-
-#### 9.2 启动~
-
-~`hexo s`~
-
-#### 9.3 按键ctr+a+d后台运行~
-
-#### 9.4 想要再次回到hexo~
-
-~`screen -r hexo`~
+**Designed with ❤️ by [zoyo94](https://github.com/zoyo94)**
 

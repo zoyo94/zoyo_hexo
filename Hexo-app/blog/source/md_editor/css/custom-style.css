@@ -1,0 +1,385 @@
+/* Custom Styles for MD Editor */
+html,
+body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    background: #2c2827;
+}
+
+.editormd {
+    box-sizing: border-box;
+}
+
+/* 提高 CodeMirror 搜索框的 z-index 和样式 */
+.CodeMirror-dialog {
+    z-index: 10000 !important;
+    background-color: #3a3534 !important;
+    color: #ddd !important;
+    padding: 1em !important;
+    border-radius: 8px !important;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5) !important;
+    position: absolute !important;
+    top: 55px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 80% !important;
+    max-width: 400px !important;
+    border: 1px solid #555;
+}
+
+.CodeMirror-dialog input[type="text"] {
+    width: calc(100% - 20px) !important;
+    padding: 8px !important;
+    background-color: #2c2827 !important;
+    border: 1px solid #555 !important;
+    color: #eee !important;
+    border-radius: 4px !important;
+}
+
+/* Custom Search Dialog */
+.custom-search-dialog {
+    display: none;
+    /* Initially hidden */
+    position: absolute;
+    top: 55px;
+    right: 20px;
+    z-index: 10000;
+    background: #3a3534;
+    color: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    border: 1px solid #555;
+    width: 300px;
+}
+
+.custom-search-dialog h3 {
+    margin-top: 0;
+    color: #ff6f61;
+    font-size: 16px;
+    margin-bottom: 10px;
+}
+
+.custom-search-dialog input {
+    width: calc(100% - 16px);
+    padding: 8px;
+    margin-bottom: 10px;
+    background: #2c2827;
+    border: 1px solid #555;
+    color: white;
+    border-radius: 4px;
+}
+
+.custom-search-dialog button {
+    background: linear-gradient(135deg, #ff6f61, #ff9f1c);
+    border: none;
+    padding: 8px 12px;
+    margin: 2px;
+    border-radius: 4px;
+    color: #ffffff;
+    font-size: 12px;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.custom-search-dialog button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(255, 111, 97, 0.5);
+}
+
+#custom-search-status {
+    margin-top: 10px;
+    font-size: 12px;
+    color: #ffc107;
+    height: 15px;
+}
+
+input[type="file"] {
+    display: none;
+}
+
+label {
+    color: white;
+}
+
+.editormd .editormd-toolbar {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+    padding: 5px;
+}
+
+.dropdown-group {
+    display: inline-flex;
+    align-items: center;
+    margin: 0 5px;
+}
+
+select {
+    appearance: none;
+    background: linear-gradient(135deg, #4a4540 0%, #3a3534 100%);
+    background-image: url('data:image/svg+xml;utf8,<svg fill="%23ffffff" height="16" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 12px;
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 8px 35px 8px 15px;
+    font-size: 13px;
+    font-family: 'Arial', sans-serif;
+    font-weight: 500;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3),
+        0 2px 8px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    width: 160px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-left: 8px;
+    backdrop-filter: blur(10px);
+    position: relative;
+}
+
+select:hover {
+    border-color: rgba(255, 111, 97, 0.6);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4),
+        0 3px 12px rgba(255, 111, 97, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
+    background: linear-gradient(135deg, #5a5045 0%, #4a4540 100%);
+}
+
+select:focus {
+    outline: none;
+    border-color: #ff6f61;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5),
+        0 0 0 3px rgba(255, 111, 97, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+    background: linear-gradient(135deg, #5a5045 0%, #4a4540 100%);
+}
+
+select:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* 下拉选项样式 */
+select option {
+    background: #3a3534;
+    color: #ffffff;
+    padding: 8px 15px;
+    border: none;
+    font-size: 13px;
+}
+
+select option:hover {
+    background: linear-gradient(135deg, #ff6f61, #ff9f1c);
+    color: #ffffff;
+}
+
+/* 统一科技感文件选择器（.tech-file-selector-v2 与 v1 共享样式） */
+.tech-file-selector,
+.tech-file-selector-v2 {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    margin: 0 8px;
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    border-radius: 20px;
+    padding: 8px 16px;
+    color: #00ffff;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+    width: 120px;
+    justify-content: flex-start;
+    height: 18px;
+}
+
+.tech-file-selector::before,
+.tech-file-selector-v2::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.tech-file-selector:hover::before,
+.tech-file-selector-v2:hover::before {
+    left: 100%;
+}
+
+.tech-file-selector:hover,
+.tech-file-selector-v2:hover {
+    border-color: rgba(0, 255, 255, 0.6);
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+.tech-file-selector .selector-icon,
+.tech-file-selector-v2 .selector-icon {
+    margin-right: 8px;
+    font-size: 14px;
+    animation: pulse 2s infinite;
+    width: 16px;
+    text-align: center;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.6;
+    }
+}
+
+.tech-file-selector .selector-text,
+.tech-file-selector-v2 .selector-text {
+    position: relative;
+    z-index: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 80px;
+}
+
+select option:checked {
+    background: linear-gradient(135deg, #ff6f61, #ff9f1c);
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.editormd .editormd-toolbar form label {
+    margin-right: 5px;
+    font-size: 13px;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(135deg, #3a3534, #2c2827);
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.6);
+    z-index: 1000;
+    color: #ffffff;
+    text-align: center;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.modal.show {
+    transform: translate(-50%, -50%) scale(1.05);
+    opacity: 1;
+}
+
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 999;
+}
+
+.modal p {
+    margin: 0 0 15px;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.modal button {
+    background: linear-gradient(135deg, #ff6f61, #ff9f1c);
+    border: none;
+    padding: 10px 20px;
+    margin: 0 10px;
+    border-radius: 20px;
+    color: #ffffff;
+    font-size: 14px;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.modal button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(255, 111, 97, 0.5);
+}
+
+.modal button:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+.progress-circle {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #ccc;
+    border-top: 5px solid #ff6f61;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+#progress-text {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+#autosave-countdown {
+    background: #3a3534;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+/* 拖拽上传样式 */
+.drag-over {
+    border: 2px dashed #ff6f61 !important;
+    background-color: rgba(255, 111, 97, 0.1) !important;
+}
+
+.drag-over::after {
+    content: "拖拽图片、视频、MD文件或文件夹到此处上传";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 111, 97, 0.9);
+    color: white;
+    padding: 20px 40px;
+    border-radius: 10px;
+    font-size: 18px;
+    font-weight: bold;
+    z-index: 1000;
+    pointer-events: none;
+}

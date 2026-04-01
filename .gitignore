@@ -1,0 +1,34 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+Hexo-app/blog/source/md_editor/*.log
+
+# Node modules
+node_modules/
+
+# Mac OS
+.DS_Store
+
+# Hexo
+public/
+db.json
+.sass-cache/
+
+# Markdown Editor / Runtime
+Hexo-app/blog/source/md_editor/public/uploads/
+*.pid
+*.seed
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# IDE
+.idea/
+.vscode/
+.project
+.url
+css/*.map

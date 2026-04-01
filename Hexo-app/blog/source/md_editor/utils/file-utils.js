@@ -38,7 +38,7 @@ class FileUtils {
             .replace(/^[_-]+|[_-]+$/g, '')     // 移除开头和结尾的下划线和短横线
             .trim() || 'untitled';             // 如果为空使用默认名称
         
-        return safeName + (ext || '.jpg');
+        return safeName + ext; // 只拼接实际存在的扩展名，不添加默认后缀
     }
 
     /**
@@ -47,13 +47,22 @@ class FileUtils {
      * @param {string} targetDir - 目标目录路径。
      * @returns {string} 唯一的、安全的文件名。
      */
-    static generateUniqueFilename(originalName, targetDir) {
+    static async generateUniqueFilename(originalName, targetDir) {
         const safeName = this.sanitizeFilename(originalName);
         let finalName = safeName;
         let counter = 1;
         
-        // 如果文件已存在，添加数字后缀
-        while (fs.existsSync(path.join(targetDir, finalName))) {
+        // 异步检查文件是否存在，避免阻塞事件循环
+        const fileExists = async (filePath) => {
+            try {
+                await fs.promises.access(filePath);
+                return true;
+            } catch {
+                return false;
+            }
+        };
+        
+        while (await fileExists(path.join(targetDir, finalName))) {
             const ext = path.extname(safeName);
             const nameWithoutExt = path.basename(safeName, ext);
             finalName = `${nameWithoutExt}_${counter}${ext}`;

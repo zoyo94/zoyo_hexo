@@ -3,9 +3,11 @@
  */
 class CommonUtils {
     /**
-     * 获取后端服务器地址 - 统一实现
+     * 获取后端服务器地址 - 建议优先使用 apiService
      */
     static getBackendUrl() {
+        if (window.apiService) return ''; // apiService 已处理基础路径
+        
         const currentHost = window.location.hostname;
         const currentPort = window.location.port;
         
@@ -36,27 +38,12 @@ class CommonUtils {
     }
 
     /**
-     * 检查服务器文件是否存在 - 统一实现
+     * 检查服务器文件是否存在 - 使用统一的 apiService
      */
     static async checkServerFileExists(filename) {
         try {
-            const backendUrl = this.getBackendUrl();
-            const response = await fetch(`${backendUrl}/api/check-file`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Cache-Control': 'no-cache, no-store, must-revalidate',
-                    'Pragma': 'no-cache',
-                    'Expires': '0'
-                },
-                body: JSON.stringify({ filename })
-            });
-
-            if (response.ok) {
-                const result = await response.json();
-                return result.exists;
-            }
-            return false;
+            const data = await window.apiService.checkFileExists(filename);
+            return data.success && data.exists;
         } catch (error) {
             console.warn('检查服务器文件失败:', error);
             return false;

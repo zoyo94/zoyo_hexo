@@ -50,34 +50,23 @@ class CacheManager {
     }
 
     /**
-     * 获取后端服务器地址 - 使用通用工具类
+     * 获取后端服务器地址 - 建议优先使用 apiService
      */
     getBackendUrl() {
+        if (window.apiService) return ''; // apiService 已处理基础路径
         return CommonUtils.getBackendUrl();
     }
 
     /**
-     * 检查服务器文件是否存在
+     * 检查服务器文件是否存在 - 使用 apiService
      */
     async checkServerFileExists(filename) {
         try {
-            const backendUrl = this.getBackendUrl();
-            const response = await fetch(`${backendUrl}/api/check-file`, {
+            const data = await window.apiService.custom('/api/check-file', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Cache-Control': 'no-cache, no-store, must-revalidate',
-                    'Pragma': 'no-cache',
-                    'Expires': '0'
-                },
-                body: JSON.stringify({ filename })
+                body: { filename }
             });
-
-            if (response.ok) {
-                const result = await response.json();
-                return result.exists;
-            }
-            return false;
+            return data.success && data.exists;
         } catch (error) {
             console.warn('检查服务器文件失败:', error);
             return false;
@@ -85,22 +74,12 @@ class CacheManager {
     }
 
     /**
-     * 同步服务器文件列表
+     * 同步服务器文件列表 - 使用 apiService
      */
     async syncServerFileList() {
         try {
-            const backendUrl = this.getBackendUrl();
-            const response = await fetch(`${backendUrl}/api/list-files`, {
-                method: 'GET',
-                headers: {
-                    'Cache-Control': 'no-cache, no-store, must-revalidate',
-                    'Pragma': 'no-cache',
-                    'Expires': '0'
-                }
-            });
-
-            if (response.ok) {
-                const result = await response.json();
+            const result = await window.apiService.custom('/api/list-files');
+            if (result && result.files) {
                 this.serverFileList = new Set(result.files || []);
                 this.saveCacheToStorage();
                 return true;

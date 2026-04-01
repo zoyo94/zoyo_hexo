@@ -1,7 +1,10 @@
 /**
  * 文件管理模块
- * 处理文件上传、编码和特殊字符问题
+ * 处理文件上传、读取、保存、目录获取等操作
+ * 所有网络请求通过 API 服务层完成
  */
+
+import { API, getBaseUrl } from '../services/api.js';
 
 export class FileManager {
     constructor(config) {
@@ -11,257 +14,147 @@ export class FileManager {
             destination: '',
             canceledFolders: new Set(JSON.parse(localStorage.getItem('canceledFolders') || '[]'))
         };
-        this.ongoingFetches = new Map(); // 用于存储正在进行的 fetch 请求，防止重复
+        // 防止并发重复请求同一目录
+        this._ongoingFetches = new Map();
     }
 
+    // ─────────────────────────────────────────────
+    // 工具方法
+    // ─────────────────────────────────────────────
 
     /**
-     * 生成 Markdown 图片链接，处理特殊字符和中文路径
+     * 生成 Markdown 图片/视频链接
      */
     generateMarkdownImage(altText, imagePath) {
-        // 简化路径生成：检查后端返回的路径格式
         let fullImagePath;
         if (imagePath.includes('/')) {
-            // 如果路径已经包含分隔符，直接添加 ./ 前缀
             fullImagePath = `./${imagePath}`;
         } else {
-            // 获取当前媒体文件夹
-            const currentMediaFolder = window.appState ? window.appState.getCurrentMediaFolder() : 'IMG';
-            
-            // 检查imagePath是否已经包含文件夹名
-            if (imagePath.startsWith(currentMediaFolder)) {
-                // 如果已经包含文件夹名，需要分离出纯文件名
-                const fileName = imagePath.substring(currentMediaFolder.length);
-                fullImagePath = `./${currentMediaFolder}/${fileName}`;
-            } else {
-                // 如果是纯文件名，直接组合
-                fullImagePath = `./${currentMediaFolder}/${imagePath}`;
-            }
+            const folder = window.appState ? window.appState.getCurrentMediaFolder() : 'IMG';
+            fullImagePath = imagePath.startsWith(folder)
+                ? `./${folder}/${imagePath.substring(folder.length)}`
+                : `./${folder}/${imagePath}`;
         }
-        
-        // 清理 alt 文本，移除可能影响 Markdown 的字符
-        const cleanAltText = altText.replace(/[\\[\\]]/g, '').replace(/[()]/g, '');
-        
-        // 检查文件扩展名，如果是视频文件则生成视频标签
-        const fileExtension = imagePath.toLowerCase().split('.').pop();
-        const videoExtensions = ['mp4', 'webm', 'ogg', 'avi', 'mov', 'wmv', 'flv', 'mkv'];
-        
-        if (videoExtensions.includes(fileExtension)) {
-            // 生成视频标签，格式：<video src="./IMG/filename.MP4" controls="controls" width="500" height="300"></video>
-            return `<video src="${fullImagePath}" controls="controls" width="500" height="300"></video>`;
-        } else {
-            // 生成图片标签
-            return `![${cleanAltText}](${fullImagePath})`;
-        }
+
+        const cleanAlt = altText.replace(/[[\]()]/g, '');
+        const ext = imagePath.toLowerCase().split('.').pop();
+        const videoExts = ['mp4', 'webm', 'ogg', 'avi', 'mov', 'wmv', 'flv', 'mkv'];
+
+        return videoExts.includes(ext)
+            ? `<video src="${fullImagePath}" controls="controls" width="500" height="300"></video>`
+            : `![${cleanAlt}](${fullImagePath})`;
     }
 
     /**
-     * 转换 Markdown 内容中的图片和视频路径
-     * @param {string} markdownContent - 原始 Markdown 内容
-     * @returns {string} 转换后的 Markdown 内容
+     * transformMarkdownContent - 后端已处理路径，前端直接透传
      */
-    transformMarkdownContent(markdownContent) {
-        // 后端现在处理所有媒体文件路径转换，前端不再需要进行此操作
-        return markdownContent;
+    transformMarkdownContent(content) {
+        return content;
     }
 
     /**
-     * 检查文件是否存在
+     * 标准化目录路径（去除多余的 './' 前缀）
      */
-    async checkFileExists(filePath) {
-        try {
-            const response = await fetch(filePath, { method: 'HEAD' });
-            return response.ok;
-        } catch (error) {
-            return false;
-        }
+    normalizeDirectoryPath(p) {
+        if (!p) return '.';
+        let n = p.replace(/\\/g, '/');
+        if (n.startsWith('./') && n.length > 2) n = n.slice(2);
+        else if (n === './') n = '.';
+        return n || '.';
     }
-    /**
-     * 获取后端服务器地址
-     */
-    // 直接使用全局的 window.BACKEND_URL
-    getBackendUrl() {
-        return window.BACKEND_URL;
-    }
-    /**
-     * 上传文件的通用方法
-     */
-    async uploadFiles(files, endpoint, options = {}) {
-        const formData = new FormData();
-        
-        // 添加文件
-        if (Array.isArray(files)) {
-            files.forEach(file => formData.append(options.key || 'file', file));
-        } else {
-            formData.append(options.key || 'file', files);
-        }        
-        // 添加额外数据
-        if (options.extraData) {
-            Object.entries(options.extraData).forEach(([key, value]) => {
-                formData.append(key, value);
-            });
-        }
-        
-        try {
-            const backendUrl = this.getBackendUrl();
-            const response = await fetch(`${backendUrl}${endpoint}`, {
-                method: 'POST',
-                body: formData
-            });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            const data = await response.json();
-            
-            if (!data.success) {
-                throw new Error(data.message || '上传失败');
-            }
+    // ─────────────────────────────────────────────
+    // 上传
+    // ─────────────────────────────────────────────
 
-            return data;
-        } catch (error) {
-            console.error('上传失败:', error);
-            throw error;
-        }
-    }
     /**
-     * 处理 MD 文件上传
+     * 通用文件上传方法
+     */
+    async _upload(files, endpoint, { key = 'file', extraData = {} } = {}) {
+        const form = new FormData();
+        const arr = Array.isArray(files) ? files : [files];
+        arr.forEach(f => form.append(key, f));
+        Object.entries(extraData).forEach(([k, v]) => form.append(k, v));
+
+        const response = await fetch(`${getBaseUrl()}${endpoint}`, { method: 'POST', body: form });
+        if (!response.ok) throw new Error(`上传失败 HTTP ${response.status}`);
+        const data = await response.json();
+        if (!data.success) throw new Error(data.message || '上传失败');
+        return data;
+    }
+
+    /**
+     * 上传 Markdown 文件
      */
     async handleMdFileUpload(file) {
-        try {
-            console.log('上传MD文件:', file.name);
-            
-            // 检查缓存管理器是否可以上传
-            if (window.cacheManager) {
-                const canUpload = await window.cacheManager.canUploadFile(file);
-                if (!canUpload.canUpload) {
-                    throw new Error(canUpload.message);
-                }
-            }
-            
-            const data = await this.uploadFiles(file, '/upload', { 
-                key: 'md_file' 
-            });
-            
-            console.log('MD文件上传成功:', data);
-            
-            // 添加到缓存
-            if (window.cacheManager) {
-                window.cacheManager.addToCache(file, data);
-            }
-            
-            // 读取文件内容
-            const content = await this.readFileContent(file);
-            
-            return {
-                success: true,
-                filename: data.filename,
-                originalName: data.originalName || file.name,
-                content: content,
-                data: data
-            };
-        } catch (error) {
-            console.error('MD文件上传失败:', error);
-            throw error;
+        // 重复上传检查
+        if (window.cacheManager) {
+            const { canUpload, message } = await window.cacheManager.canUploadFile(file);
+            if (!canUpload) throw new Error(message);
         }
+
+        const data = await this._upload(file, '/upload', { key: 'md_file' });
+        window.cacheManager?.addToCache(file, data);
+
+        const content = await this._readLocalFile(file);
+        return { success: true, filename: data.filename, originalName: data.originalName || file.name, content, data };
     }
+
     /**
-     * 处理图片和视频上传
+     * 上传图片/视频
      */
     async handleImageUpload(files, destination) {
-        try {
-            console.log('上传图片文件:', files.map(f => f.name));
-            
-            // 检查每个文件是否可以上传
-            if (window.cacheManager) {
-                for (const file of files) {
-                    const canUpload = await window.cacheManager.canUploadFile(file);
-                    if (!canUpload.canUpload) {
-                        throw new Error(`文件 ${file.name}: ${canUpload.message}`);
-                    }
-                }
+        if (window.cacheManager) {
+            for (const f of files) {
+                const { canUpload, message } = await window.cacheManager.canUploadFile(f);
+                if (!canUpload) throw new Error(`文件 ${f.name}: ${message}`);
             }
-            
-            const data = await this.uploadFiles(files, '/upimg', {
-                key: 'image',
-                extraData: { destination: destination }
-            });
-            
-            console.log('图片上传成功:', data);
-            
-            // 添加到缓存
-            if (window.cacheManager) {
-                files.forEach(file => {
-                    window.cacheManager.addToCache(file, data);
-                });
-            }
-            
-            // 生成 Markdown 内容
-            let markdown = '';
-            data.imagePaths.forEach((path, index) => {
-                const originalName = data.originalNames ? data.originalNames[index] : data.filenames[index];
-                const altText = originalName.split('.')[0];
-                markdown += '\n' + this.generateMarkdownImage(altText, path); // 修正此处，使用 
-                
-            });
-            
-            return {
-                success: true,
-                markdown: markdown,
-                imagePaths: data.imagePaths,
-                filenames: data.filenames,
-                data: data
-            };
-        } catch (error) {
-            console.error('图片上传失败:', error);
-            throw error;
         }
+
+        const data = await this._upload(files, '/upimg', { key: 'image', extraData: { destination } });
+        files.forEach(f => window.cacheManager?.addToCache(f, data));
+
+        let markdown = '';
+        data.imagePaths.forEach((p, i) => {
+            const name = (data.originalNames?.[i] ?? data.filenames[i]).split('.')[0];
+            markdown += '\n' + this.generateMarkdownImage(name, p);
+        });
+
+        return { success: true, markdown, imagePaths: data.imagePaths, filenames: data.filenames, data };
     }
+
     /**
-     * 处理文件夹上传
+     * 分类文件夹中的文件（识别主 MD 文件和子文件）
      */
-    /**
-     * 分类文件夹中的文件
-     * @param {File[]} files - 文件列表
-     * @returns {Object} 分类后的文件对象 { mdFile: File, subFiles: File[], folderName: string }
-     */
-    categorizeFolderFiles(files) {
+    _categorizeFolderFiles(files) {
         let mdFile = null;
         const subFiles = [];
         let folderName = '';
 
         for (const file of files) {
             const parts = file.webkitRelativePath.split('/');
-            // 检查是否是文件夹根目录下的MD文件，且文件名与文件夹名匹配 (e.g., folder/folder.md)
-            // 或者只是一个MD文件在根目录下 (e.g., folder/some.md)
-            // 优先匹配与文件夹同名的MD文件
             if (parts.length >= 2 && parts[parts.length - 1].endsWith('.md')) {
-                const currentFolderName = parts[0];
-                const mdFilenameWithoutExt = parts[parts.length - 1].replace(/\.md$/, '');
-                // 如果是与文件夹同名的MD文件，或者这是第一个找到的MD文件
-                if (mdFilenameWithoutExt === currentFolderName || mdFile === null) {
+                const curFolder = parts[0];
+                const mdBase = parts[parts.length - 1].replace(/\.md$/, '');
+                if (mdBase === curFolder || mdFile === null) {
+                    if (mdFile) subFiles.push(mdFile); // 旧的降级为子文件
                     mdFile = file;
-                    folderName = currentFolderName;
+                    folderName = curFolder;
                 } else {
-                    // 其他MD文件也作为子文件处理
                     subFiles.push(file);
                 }
             } else {
                 subFiles.push(file);
             }
         }
-        
-        // Fallback: If no specific mdFile found, but there are MD files in subFiles, pick the first one
-        if (!mdFile && subFiles.length > 0) {
-            const firstMdInSub = subFiles.find(f => f.name.endsWith('.md'));
-            if (firstMdInSub) {
-                mdFile = firstMdInSub;
-                // Remove it from subFiles
-                const index = subFiles.indexOf(firstMdInSub);
-                if (index > -1) {
-                    subFiles.splice(index, 1);
-                }
-                folderName = firstMdInSub.webkitRelativePath.split('/')[0];
+
+        // 兜底：从子文件中挑一个 MD 文件
+        if (!mdFile) {
+            const first = subFiles.find(f => f.name.endsWith('.md'));
+            if (first) {
+                subFiles.splice(subFiles.indexOf(first), 1);
+                mdFile = first;
+                folderName = first.webkitRelativePath.split('/')[0];
             }
         }
 
@@ -269,347 +162,173 @@ export class FileManager {
     }
 
     /**
-     * 处理文件夹上传
-     * @param {File[]} files - 文件列表
-     * @returns {Promise<Object>} 上传结果
+     * 上传整个文件夹
      */
     async handleFolderUpload(files) {
-        let folderName = ''; // Initialize here to ensure it's always defined
-
+        let folderName = '';
         try {
-            console.log('开始处理文件夹上传，文件数量:', files.length);
+            const { mdFile, subFiles, folderName: detected } = this._categorizeFolderFiles(files);
+            folderName = detected;
+            if (!mdFile) throw new Error('文件夹中未找到 Markdown 文件');
 
-            const { mdFile, subFiles, folderName: detectedFolderName } = this.categorizeFolderFiles(files);
-            folderName = detectedFolderName; // Assign here
+            const mdResult = await this.handleMdFileUpload(mdFile);
 
-            if (!mdFile) {
-                throw new Error('文件夹中未找到 Markdown 文件。');
-            }
-
-            // 1. 上传主 Markdown 文件
-            console.log('上传主MD文件:', mdFile.name);
-            const mdResult = await this.handleMdFileUpload(mdFile); // Use existing handleMdFileUpload
-
-            // 2. 上传子文件到以MD文件命名的文件夹
             if (subFiles.length > 0) {
-                const newFolderName = mdResult.filename.replace(/\.md$/, ''); // Use the uploaded MD filename
-                console.log(`上传子文件到文件夹: ${newFolderName}, 数量: ${subFiles.length}`);
-                const subFilesResult = await this.uploadFiles(subFiles, '/upload-folder', {
+                const newFolder = mdResult.filename.replace(/\.md$/, '');
+                const subResult = await this._upload(subFiles, '/upload-folder', {
                     key: 'files',
-                    extraData: { folderName: newFolderName }
+                    extraData: { folderName: newFolder }
                 });
-                console.log('子文件上传成功:', subFilesResult);
-                // 从 subFilesResult.destination 中提取最终的文件夹名称
-                let finalFolderName = subFilesResult.destination.replace(/^\.\//, '').replace(/\/$/, '');
-                if (finalFolderName) {
-                    folderName = finalFolderName; // 更新要返回的 folderName
-                }
+                const dest = (subResult.destination || '').replace(/^\.\//, '').replace(/\/$/, '');
+                if (dest) folderName = dest;
             }
 
-            console.log('文件夹处理完成:', folderName);
-            return {
-                success: true,
-                folderName: folderName, // 这将是来自 subFilesResult.destination 的名称（如果可用）
-                mdFilename: mdResult.filename,
-                mdContent: mdResult.content
-            };
+            return { success: true, folderName, mdFilename: mdResult.filename, mdContent: mdResult.content };
         } catch (error) {
-            console.error('文件夹上传处理失败:', error);
-            return { success: false, message: error.message, folderName: folderName }; // Ensure folderName is returned even on error
+            console.error('[FileManager] 文件夹上传失败:', error);
+            return { success: false, message: error.message, folderName };
         }
     }
-    /**
-     * 检查并标准化目录路径
-     * @param {string} path - 原始路径
-     * @returns {string} 标准化后的路径
-     */
-    normalizeDirectoryPath(path) {
-        if (!path) return '.';
-        let normalized = path.replace(/\\/g, '/'); // 将反斜杠替换为正斜杠
-       
-        if (normalized.startsWith('./') && normalized.length > 2) {
-            normalized = normalized.substring(2); // 移除 './' 前缀
-            
-        } else if (normalized === './') {
-            normalized = '.'; // 将 './' 标准化为 '.'
-            
-        }
-        if (normalized === '') {
-            normalized = '.';
-        }
-        
-        return normalized;
-    }
+
+    // ─────────────────────────────────────────────
+    // 读取 / 保存
+    // ─────────────────────────────────────────────
 
     /**
-     * 读取文件内容
+     * 读取本地文件内容（FileReader）
      */
-    async fetchFileContent(filePath) {
-        try {
-            let directory = '.';
-            let filename = filePath;
-
-            // 检查 filePath 是否包含路径信息
-            const lastSlashIndex = filePath.lastIndexOf('/');
-            if (lastSlashIndex !== -1) {
-                directory = filePath.substring(0, lastSlashIndex);
-                filename = filePath.substring(lastSlashIndex + 1);
-            }
-            const backendUrl = this.getBackendUrl();
-            const response = await fetch(`${backendUrl}/get_md?directory=${encodeURIComponent(directory)}&filename=${encodeURIComponent(filename)}`);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-                        const result = await response.json(); // Expect JSON response
-
-            if (result.success) {
-                return result.content;
-            } else {
-                throw new Error(result.message || '文件内容获取失败');
-            }
-        } catch (error) {
-            console.error('Error fetching file content:', error);
-            window.showMessage(`读取文件失败: ${error.message}`, 'error');
-            return '';
-        }
-    }
-    /**
-     * 读取本地文件内容 (用于文件选择器)
-     */
-    async readFileContent(file) {
+    _readLocalFile(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
-            reader.onload = (e) => resolve(e.target.result);
-            reader.onerror = (e) => reject(new Error('文件读取失败'));
+            reader.onload = e => resolve(e.target.result);
+            reader.onerror = () => reject(new Error('文件读取失败'));
             reader.readAsText(file, 'UTF-8');
         });
     }
+
+    /**
+     * 从后端获取文件内容
+     */
+    async fetchFileContent(filePath) {
+        try {
+            const lastSlash = filePath.lastIndexOf('/');
+            const directory = lastSlash !== -1 ? filePath.substring(0, lastSlash) : '.';
+            const filename = lastSlash !== -1 ? filePath.substring(lastSlash + 1) : filePath;
+
+            const result = await API.getMarkdownFile(directory, filename);
+            if (result.success) return result.content;
+            throw new Error(result.message || '文件内容获取失败');
+        } catch (error) {
+            console.error('[FileManager] fetchFileContent 失败:', error);
+            window.showMessage?.(`读取文件失败: ${error.message}`, 'error');
+            return '';
+        }
+    }
+
     /**
      * 保存文件内容
      */
-    async saveContent(filename, content, isAuto = false, directory = '.') {
-        try {
-            // 如果是自动保存且内容没有变化，跳过保存
-            if (isAuto && !window.state.hasContentChanged) {
-                return { success: true, message: '内容未变化，跳过自动保存' };
-            }
-            
-            // 检查原始内容是否包含图片或视频（使用原项目的检测逻辑）
-            const imageMatches = content.match(/!\\[.*?\\]\\(.*?\\)/g);
-            const videoMatches = content.match(/<video[^>]*src=\"[^\"]*\"[^>]*>/g);
-            const hasImages = !!(imageMatches || videoMatches);
-            
-            
-            const backendUrl = this.getBackendUrl();
-            const response = await fetch(`${backendUrl}/save_md`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    destination: directory, 
-                    filename: filename, 
-                    currentContent: content || '', // 直接使用原始内容
-                    hasImages: hasImages
-                })
-            });
+    async saveContent(filename, content, isAuto = false, directory = '.', oldFilename = null) {
+        if (isAuto && !window.state?.hasContentChanged) {
+            return { success: true, message: '内容未变化，跳过自动保存' };
+        }
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-                        const data = await response.json();
-            
-            if (!data.success) {
-                throw new Error(data.message || '保存失败');
-            }
-                        if (isAuto) {
-                console.log(`自动保存成功: ${filename}`);
-            } else {
-                console.log(`文件保存成功: ${filename}`);
-            }
+        const hasImages = /!\[.*?\]\(.*?\)/g.test(content) || /<video[^>]*src="[^"]*"[^>]*>/g.test(content);
+
+        try {
+            const data = await API.saveMarkdownFile({ 
+                destination: directory, 
+                filename, 
+                currentContent: content || '', 
+                hasImages,
+                oldFilename
+            });
+            if (!data.success) throw new Error(data.message || '保存失败');
+            console.log(`[FileManager] ${isAuto ? '自动' : '手动'}保存成功: ${filename}`);
             return data;
         } catch (error) {
-            if (isAuto) {
-                console.error(`自动保存失败: ${filename}`, error);
-            } else {
-                console.error(`文件保存失败: ${filename}`, error);
-            }
+            console.error(`[FileManager] ${isAuto ? '自动' : '手动'}保存失败: ${filename}`, error);
             throw error;
         }
     }
+
+    /**
+     * 清空 cache 文件
+     */
+    async clearCache() {
+        const result = await this.saveContent('cache', '', false, '.');
+        if (result?.success) {
+            console.log('[FileManager] cache 文件已清空');
+            return { success: true, message: 'cache 文件已清空' };
+        }
+        throw new Error('清空 cache 文件失败');
+    }
+
+    // ─────────────────────────────────────────────
+    // 目录 / 文件夹操作
+    // ─────────────────────────────────────────────
+
+    /**
+     * 获取目录树（自动去重并发请求）
+     */
+    async fetchDirectoryTree(directory) {
+        const norm = this.normalizeDirectoryPath(directory);
+
+        if (this._ongoingFetches.has(norm)) {
+            return this._ongoingFetches.get(norm);
+        }
+
+        const promise = (async () => {
+            try {
+                const raw = await API.getDirectoryTree(norm);
+                const files = [];
+                const folders = [];
+                (raw.children || []).forEach(item => {
+                    const entry = { name: item.name, path: `${norm}/${item.name}` };
+                    if (item.type === 'file') files.push(entry);
+                    else if (item.type === 'directory') folders.push(entry);
+                });
+                return { files, folders, rawData: raw };
+            } finally {
+                this._ongoingFetches.delete(norm);
+            }
+        })();
+
+        this._ongoingFetches.set(norm, promise);
+        return promise;
+    }
+
     /**
      * 创建文件夹
      */
     async createFolder(folderName, parentPath = './') {
-        try {
-            const formData = new FormData();
-            formData.append('folderName', folderName);
-            formData.append('folderPath', parentPath);
-            const backendUrl = this.getBackendUrl();
-            const response = await fetch(`${backendUrl}/create_folder`, {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-                        const data = await response.json();
-            
-            if (!data.success) {
-                throw new Error(data.message || '文件夹创建失败');
-            }
-            console.log(`文件夹创建成功: ${folderName}`);
-            return data;
-        } catch (error) {
-            console.error(`文件夹创建失败: ${folderName}`, error);
-            throw error;
-        }
+        const data = await API.createFolder(folderName, parentPath);
+        if (!data.success) throw new Error(data.message || '文件夹创建失败');
+        console.log(`[FileManager] 文件夹创建成功: ${folderName}`);
+        return data;
     }
+
     /**
-     * 获取目录树
-     */
-    async fetchDirectoryTree(directory) {
-        // 标准化目录路径
-        const normalizedDirectory = this.normalizeDirectoryPath(directory);
-
-        // 如果该目录的请求正在进行中，则返回现有 Promise
-        if (this.ongoingFetches.has(normalizedDirectory)) {
-            return this.ongoingFetches.get(normalizedDirectory);
-        }
-
-        const fetchPromise = (async () => {
-            try {
-                const backendUrl = this.getBackendUrl();
-                const response = await fetch(`${backendUrl}/directory-tree?directory=${encodeURIComponent(normalizedDirectory)}`);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                                const rawData = await response.json(); // 重命名为 rawData
-                console.log(`获取目录树成功: ${normalizedDirectory}`, rawData); // 使用标准化后的路径进行日志记录
-                const files = [];
-                const folders = [];
-
-                // 解析 rawData.children 数组，填充 files 和 folders
-                if (Array.isArray(rawData.children)) {
-                    rawData.children.forEach(item => {
-                        if (item.type === 'file') {
-                            files.push({ name: item.name, path: `${normalizedDirectory}/${item.name}` }); // 构建完整路径
-                        } else if (item.type === 'directory') {
-                            folders.push({ name: item.name, path: `${normalizedDirectory}/${item.name}` }); // 构建完整路径
-                        }
-                    });
-                }
-                // 返回包含 files 和 folders 属性的对象
-                return { files, folders, rawData }; // 保留 rawData 以便调试
-            } catch (error) {
-                console.error(`获取目录树失败: ${normalizedDirectory}`, error);
-                throw error;
-            } finally {
-                // 无论成功或失败，请求完成后从 ongoingFetches 中移除
-                this.ongoingFetches.delete(normalizedDirectory);
-            }
-        })();
-
-        // 将 Promise 存储起来
-        this.ongoingFetches.set(normalizedDirectory, fetchPromise);
-        return fetchPromise;
-    }
-    /**
-     * 移动图片文件
+     * 移动图片/视频
      */
     async moveImage(fileName, fromFolder, toFolder, originalDir) {
-        try {
-            const formData = new FormData();
-            formData.append('fileName', fileName);
-            formData.append('folderName', fromFolder);
-            formData.append('new_folderName', toFolder);
-            formData.append('original_dir', originalDir);
-            const backendUrl = this.getBackendUrl();
-            const response = await fetch(`${backendUrl}/move_image`, {
-                method: 'POST',
-                body: formData
-            });
+        const data = await API.moveImage(fileName, fromFolder, toFolder, originalDir);
+        if (!data.success) throw new Error(data.message || '图片移动失败');
+        console.log(`[FileManager] 图片移动成功: ${fileName} → ${toFolder}`);
+        return data;
+    }
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-                        const data = await response.json();
-            
-            if (!data.success) {
-                throw new Error(data.message || '图片移动失败');
-            }
-            console.log(`图片移动成功: ${fileName} 从 ${fromFolder} 到 ${toFolder}`);
-            return data;
-        } catch (error) {
-            console.error(`图片移动失败: ${fileName}`, error);
-            throw error;
-        }
-    }
-    /**
-     * 导出压缩文件
-     */
-    async exportCompressed(directoryName, selectedFile, originalDir, markdownContent) {
-        try {
-            const formData = new FormData();
-            formData.append('directoryName', directoryName);
-            formData.append('selectedFile', selectedFile);
-            formData.append('original_dir', originalDir);
-            formData.append('markdownContent', markdownContent);
-            const backendUrl = this.getBackendUrl();
-            const response = await fetch(`${backendUrl}/tgz_download`, {
-                method: 'POST',
-                body: formData
-            });
+    // ─────────────────────────────────────────────
+    // Getter / Setter
+    // ─────────────────────────────────────────────
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-                        return response;
-        } catch (error) {
-            console.error('导出失败:', error);
-            throw error;
-        }
-    }
-    // Getter 和 Setter 方法
-    getCurrentFilename() {
-        return this.state.currentFilename;
-    }
-    setCurrentFilename(filename) {
-        this.state.currentFilename = filename;
-    }
-    getDestination() {
-        return this.state.destination;
-    }
-    setDestination(destination) {
-        this.state.destination = destination;
-    }
-    getCanceledFolders() {
-        return this.state.canceledFolders;
-    }
-    addCanceledFolder(folderName) {
-        this.state.canceledFolders.add(folderName);
+    getCurrentFilename() { return this.state.currentFilename; }
+    setCurrentFilename(v) { this.state.currentFilename = v; }
+    getDestination() { return this.state.destination; }
+    setDestination(v) { this.state.destination = v; }
+    getCanceledFolders() { return this.state.canceledFolders; }
+    addCanceledFolder(name) {
+        this.state.canceledFolders.add(name);
         localStorage.setItem('canceledFolders', JSON.stringify([...this.state.canceledFolders]));
-    }
-
-    /**
-     * 清空 cache 文件和 IMG 文件夹内容
-     */
-    async clearCache() {
-        try {
-            // 使用空内容保存cache文件，这样就清空了
-            const emptyContent = '';
-            const result = await this.saveContent('cache', emptyContent, false, '.');
-            
-            if (result && result.success) {
-                console.log('cache文件已清空');
-                return { success: true, message: 'cache文件已清空' };
-            } else {
-                throw new Error('清空cache文件失败');
-            }
-        } catch (error) {
-            console.error(`清空缓存失败:`, error);
-            throw error;
-        }
     }
 }

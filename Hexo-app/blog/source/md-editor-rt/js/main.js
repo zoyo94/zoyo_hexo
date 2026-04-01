@@ -1,17 +1,16 @@
-// ES模块导入
+// ES 模块导入
 import React from 'react';
 import ReactDOMClient from 'react-dom/client';
-import { jsx as _jsx } from 'react/jsx-runtime';
-import { MdEditor, DropdownToolbar } from 'md-editor-rt';
-import { ExportPDF } from '@vavt/rt-extension';
 
-// 导入自定义模块
+// 自定义模块
+import { API } from './services/api.js';
 import { FileManager } from './managers/file-manager.js';
 import { CacheManager } from './managers/cache-manager.js';
 import { OperationsFloatingPanel } from './floating-panels/operations-panel.js';
 import { SimpleCacheUI } from './floating-panels/cache-panel.js';
 import { StatusFloatingPanel } from './floating-panels/status-panel.js';
 import { DragDropHandler } from './drag-drop-handler.js';
+import { App } from './components/EditorApp.js';
 
 // 防止重复初始化
 if (window.mdEditorRtAppInitialized) {
@@ -392,35 +391,27 @@ if (window.mdEditorRtAppInitialized) {
                 return;
             }
         } else {
-            // Logic for saving an EXISTING file (按照原项目逻辑)
-            const oldTitle = fileName.replace(/\.md$/, '');
-            const newTitle = window.extractTitleFromMarkdown(content);
-
-            // 现有文件的处理 - 简化逻辑，让后端处理媒体文件
-            fileName = window.appState.currentFile;
-            if (!fileName.endsWith('.md')) {
-                fileName += '.md';
-            }
-
-            // 获取当前媒体文件夹
-            const currentMediaFolder = window.appState.getCurrentMediaFolder();
-            // 目标媒体文件夹是新提取的标题
-            const targetMediaFolder = newTitle;
-
-            const saveResult = await window.fileManager.saveContent(fileName, content, false, '.', currentMediaFolder, targetMediaFolder);
+            // 保存现有文件的逻辑
+            const oldFile = window.appState.currentFile;
+            const oldTitle = oldFile.replace(/\.md$/, '');
+            const newTitle = window.extractTitleFromMarkdown(content) || oldTitle;
+            const newFile = newTitle + '.md';
+            const oldFilename = oldFile + (oldFile.endsWith('.md') ? '' : '.md');
+            
+            // 执行带重命名支持的保存
+            const saveResult = await window.fileManager.saveContent(newFile, content, false, '.', oldFilename);
 
             if (saveResult && saveResult.success) {
-                // 检查是否需要重新加载：当内容包含媒体文件且发生了标题变化（可能导致目录迁移）时
-                const hasImages = /!\[.*?\]\(.*?\)/g.test(content) || /<video[^>]*src="[^"]*"[^>]*>/g.test(content);
-                
-                // 如果有媒体文件且标题发生了变化，则需要重新加载
-                if (hasImages && oldTitle !== newTitle) {
+                // 如果标题发生了变化，更新全局状态中的当前文件名
+                if (oldTitle !== newTitle) {
+                    window.appState.updateCurrentFile(newTitle, newTitle); // 更新文件名为新标题，媒体文件夹也同步为新标题
                     needsReload = true;
+                    window.showMessage(`✅ 文章已重命名并保存成功！`, 'success');
+                } else {
+                    window.showMessage(`✅ 保存成功！`, 'success');
                 }
-                
-                window.showMessage(`✅ 文件保存成功！`, 'success');
             } else {
-                window.showMessage(`❌ 文件保存失败`, 'error');
+                window.showMessage(`❌ 保存失败`, 'error');
                 return;
             }
         }
@@ -430,14 +421,9 @@ if (window.mdEditorRtAppInitialized) {
             // 延迟500ms，确保后端有足够时间完成文件写入和处理
             setTimeout(async () => {
                 try {
-                    const response = await fetch(`${window.BACKEND_URL}/get_md?directory=./&filename=${encodeURIComponent(fileName)}`);
-                    if (response.ok) {
-                        const reloadResult = await response.json();
-                        if (reloadResult && reloadResult.success && window.updateEditorContent) {
-                            window.updateEditorContent(reloadResult.content);
-                        }
-                    } else {
-                        console.warn(`WARNING: 重新加载文件失败，HTTP状态: ${response.status}`);
+                    const reloadResult = await API.getMarkdownFile('.', fileName);
+                    if (reloadResult && reloadResult.success && window.updateEditorContent) {
+                        window.updateEditorContent(reloadResult.content);
                     }
                 } catch (reloadError) {
                     console.error('ERROR: Failed to reload content after save:', reloadError);
@@ -449,12 +435,7 @@ if (window.mdEditorRtAppInitialized) {
     window.cleanHexo = async () => {
         window.showMessage('🔄 正在执行 Hexo clean & generate...', 'info');
         try {
-            // 假设后端有一个 /clean_generate 接口
-            const response = await fetch(`${window.BACKEND_URL}/clean_hexo`, { method: 'POST' });
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            const data = await response.json();
+            const data = await API.cleanHexo();
             if (data.success) {
                 window.showMessage('✅ Hexo clean & generate 完成', 'success');
             } else {
@@ -493,39 +474,23 @@ if (window.mdEditorRtAppInitialized) {
 
             window.showMessage('🔄 正在准备导出文件和媒体文件夹...', 'info');
             try {
-                const response = await fetch(`${window.BACKEND_URL}/tgz_download`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        directoryName: currentMediaFolder,
-                        selectedFile: filenameWithExt,
-                        original_dir: '.', // 根据后端 tgz_download 接口的参数要求
-                        markdownContent: content // 传递当前编辑器内容
-                    })
+                const blob = await API.downloadTarball({
+                    directoryName: currentMediaFolder,
+                    selectedFile: filenameWithExt,
+                    original_dir: '.',
+                    markdownContent: content
                 });
-
-                if (response.ok) {
-                    // 触发文件下载
-                    const blob = await response.blob();
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `${currentFile}.tar.gz`; // 下载的文件名
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                    window.showMessage('✅ 导出请求已发送，请检查下载', 'success');
-                    // 在 tgz_download 完成后，立即执行一次自动保存
-                    // 强制设置 hasContentChanged 为 true，确保 autoSave 执行
-                    window.state.hasContentChanged = true;
-                    window.autoSave();
-                } else {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || '后端导出失败');
-                }
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${currentFile}.tar.gz`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                window.showMessage('✅ 导出请求已发送，请检查下载', 'success');
+                window.state.hasContentChanged = true;
+                window.autoSave();
             } catch (error) {
                 console.error('导出文件和媒体文件夹失败:', error);
                 window.showMessage(`❌ 导出失败: ${error.message}`, 'error');
@@ -589,279 +554,6 @@ if (window.mdEditorRtAppInitialized) {
         return null;
     };
 
-    // 获取当前时间的函数
-    function getCurrentTime() {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        const seconds = String(now.getSeconds()).padStart(2, '0');
-        return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
-    }
-
-    // 实时时间显示组件
-    function TimeDisplay() {
-        const [currentTime, setCurrentTime] = React.useState(getCurrentTime());
-        
-        React.useEffect(() => {
-            const timer = setInterval(() => {
-                setCurrentTime(getCurrentTime());
-            }, 1000);
-            
-            return () => clearInterval(timer);
-        }, []);
-        
-        return React.createElement('span', {
-            style: { 
-                marginLeft: '10px', 
-                color: '#999',
-                fontSize: '12px',
-                padding: '4px 8px',
-                borderRadius: '4px',
-                backgroundColor: 'rgba(255,255,255,0.1)'
-            }
-        }, `🕒 ${currentTime}`);
-    }
-
-    // 自定义工具栏按钮组件
-    function CustomToolbarButton({ title, icon, onClick, disabled }) {
-        return React.createElement('div', {
-            className: 'md-editor-toolbar-item',
-            title: title,
-            onClick: disabled ? undefined : onClick,
-            style: { 
-                cursor: disabled ? 'not-allowed' : 'pointer',
-                opacity: disabled ? 0.5 : 1,
-                padding: '4px 4px',
-                borderRadius: '4px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minWidth: '15px',
-                height: '15px',
-                fontSize: '15px',
-                userSelect: 'none'
-            }
-        }, icon);
-    }
-
-    // 手动保存按钮
-    function SaveButton(props) {
-        return React.createElement(CustomToolbarButton, {
-            title: '手动保存',
-            icon: '💾',
-            onClick: () => window.handSave(),
-            disabled: props.disabled
-        });
-    }
-
-    // 清理Hexo按钮
-    function CleanHexoButton(props) {
-        return React.createElement(CustomToolbarButton, {
-            title: '清理Hexo',
-            icon: '🔄',
-            onClick: () => window.cleanHexo(),
-            disabled: props.disabled
-        });
-    }
-
-    // 导出文件按钮
-    function ExportButton(props) {
-        return React.createElement(CustomToolbarButton, {
-            title: '导出文件',
-            icon: '📤',
-            onClick: () => window.handExport(),
-            disabled: props.disabled
-        });
-    }
-
-    // 上传图片按钮
-    function UploadImageButton(props) {
-        return React.createElement(CustomToolbarButton, {
-            title: '上传图片',
-            icon: '🖼️',
-            onClick: () => window.inputImg(),
-            disabled: props.disabled
-        });
-    }
-
-    // 主题切换按钮
-    function ThemeDropdown(props) {
-        const [visible, setVisible] = React.useState(false);
-
-        const options = [
-            { value: 'default', label: 'Default' },
-            { value: 'dark', label: 'Dark' },
-            { value: 'light', label: 'Light' },
-            { value: 'github', label: 'GitHub' },
-            { value: 'vuepress', label: 'VuePress' },
-            { value: 'mk-cute', label: 'Mk-Cute' },
-            { value: 'smart-blue', label: 'Smart Blue' },
-            { value: 'cyanosis', label: 'Cyanosis' },
-        ];
-
-        const handleChange = React.useCallback((value) => {
-            props.onChange(value);
-            if (props.closeAfterSelect) {
-                setVisible(false);
-            }
-        }, [props]);
-
-        return React.createElement(DropdownToolbar, {
-            title: props.title || props.value,
-            visible: visible,
-            onChange: setVisible,
-            disabled: props.disabled,
-            overlay: React.createElement('ul', { className: 'md-editor-menu', role: 'menu' },
-                options.map((option) =>
-                    React.createElement('li', {
-                        className: `md-editor-menu-item${option.value === props.value ? ' active' : ''}`,
-                        role: 'menuitem',
-                        tabIndex: 0,
-                        key: option.value,
-                        onClick: () => handleChange(option.value)
-                    }, option.label)
-                )
-            ),
-            trigger: React.createElement(React.Fragment, null,
-                React.createElement('span', { className: 'md-editor-icon' }, '🎨'), // 使用简单的图标
-                props.showToolbarName && React.createElement('div', { className: 'md-editor-toolbar-item-name' }, props.title || props.value)
-            )
-        });
-    }
-
-    // React component for MdEditor
-    function App() {
-        const [text, setText] = React.useState(''); // Initialize with empty string
-        const [previewTheme, setPreviewTheme] = React.useState('default'); // 初始化预览主题
-
-        // Effect to load initial content or template
-        React.useEffect(() => {
-            const loadInitialContent = async () => {
-                const filename = window.state.currentFilename;
-                const filePath = window.CONFIG.ORIGINAL_DIR + '/' + filename;
-
-                // Generate dynamic template
-                const now = new Date();
-                const year = now.getFullYear();
-                const month = String(now.getMonth() + 1).padStart(2, '0');
-                const day = String(now.getDate()).padStart(2, '0');
-                const hours = String(now.getHours()).padStart(2, '0');
-                const minutes = String(now.getMinutes()).padStart(2, '0');
-                const seconds = String(now.getSeconds()).padStart(2, '0');
-                const formattedDate = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-
-                const defaultTemplate = `---
-title: cache
-date: ${formattedDate}
-categories:
-    - [Category / 分类]
-tags:
-    - Tag / 标签
----`;
-
-                if (filename === 'cache') {
-                    try {
-                        const content = await window.fileManager.fetchFileContent(filePath); // 使用 FileManager 中已更新的函数
-                        if (content) {
-                            setText(content);
-                        } else {
-                            // 如果 'cache' 文件为空或读取失败，插入模板
-                            setText(defaultTemplate);
-                        }
-                    } catch (error) {
-                        console.error('Error loading cache file:', error);
-                        setText(defaultTemplate);
-                    }
-                } else {
-                    // 这一分支在初始加载时不太可能被命中，因为 currentFilename 总是 'cache'
-                    // 对于其他文件，正常加载（由 window.loadMdFile 处理）
-                }
-            };
-            loadInitialContent();
-        }, []); // Run once on mount
-
-        // Expose editor methods globally for operations panel
-        window.getEditorContent = () => text;
-        window.updateEditorContent = (newContent) => setText(newContent);
-        // 合并后的 insertEditorContent 函数
-        window.insertEditorContent = (content) => {
-            try {
-                // 使用状态管理更新文本内容
-                setText(prevText => {
-                    const newContent = prevText + content; // 追加内容并带换行符
-                    window.updateEditorContent(newContent); // 更新编辑器内容
-                    window.state.hasContentChanged = true; // 设置状态标志
-                    return newContent;
-                });
-                return true;
-            } catch (error) {
-                console.error('插入内容失败:', error);
-                return false;
-            }
-        };
-
-        return React.createElement(MdEditor, {
-            modelValue: text,
-            onChange: setText,
-            height: "100%", // 保持100%，现在它会相对于新的父div
-            language: "zh-CN",
-            theme: "dark",
-            codeTheme: "github",
-            previewTheme: previewTheme, // 传递预览主题
-            onUploadImg: async (files, callback) => {
-                // 使用状态管理系统获取当前媒体文件夹
-                const destination = window.appState.getCurrentMediaFolder();
-
-                const result = await window.fileManager.handleImageUpload(files, destination);
-                if (result.success) {
-                    callback(result.imagePaths);
-                    window.simpleCacheUI.showToast('✅ 图片上传成功', 'success');
-                    window.appState.onStateChange(); // 触发状态更新
-                } else {
-                    window.simpleCacheUI.showToast(`❌ 图片上传失败: ${result.message}`, 'error');
-                }
-            },
-            floatingToolbars: ['bold', 'italic', 'strikeThrough', 'title', 'sub', 'sup', 'quote', 'unorderedList', 'orderedList', 'task', 'codeRow', 'code', 'link', 'image', 'table', 'mermaid', 'katex'],
-            toolbars: [
-                'bold', 'italic', 'underline', 'strikeThrough', 'title', 'sub', 'sup', 'quote', 'unorderedList', 'orderedList', 'task',
-                '-',
-                'codeRow', 'code', 'link', 'image', 'table', 'mermaid', 'katex', 
-                '-',
-                'revoke', 'next', 'save', 5,
-                '=',
-                0, 1, 2, 3, 4, // 自定义工具栏按钮
-                '-',
-                'pageFullscreen', 'fullscreen', 'preview', 'htmlPreview', 'catalog', 'github'
-            ],
-            defToolbars: [
-                React.createElement(SaveButton, { key: 'save-btn' }),
-                React.createElement(CleanHexoButton, { key: 'clean-btn' }),
-                React.createElement(ExportButton, { key: 'export-btn' }),
-                React.createElement(UploadImageButton, { key: 'upload-btn' }),
-                React.createElement(ThemeDropdown, { // 添加主题切换按钮
-                    key: 'theme-switch',
-                    value: previewTheme,
-                    onChange: setPreviewTheme,
-                    title: '主题',
-                    closeAfterSelect: true
-                }),
-                React.createElement(ExportPDF, { key: 'export-pdf', value: text }),
-            ],
-            footers: ['markdownTotal', '=', 'scrollSwitch', 0], // 移除自定义字数统计
-            defFooters: [
-                React.createElement(TimeDisplay, { key: 'time-display' })
-            ],
-            onSave: (v, h) => {
-                // 当用户按 Ctrl+S 时触发手动保存
-                window.handSave();
-            }
-        });
-    }
-
-    // Render the React App
     const root = ReactDOMClient.createRoot(document.getElementById('root'));
     root.render(React.createElement(App));
 
@@ -916,9 +608,7 @@ tags:
             if (filenameToSave !== 'cache') {
                 filenameToSave += '.md';
             }
-            // 自动保存时，currentMediaFolder 和 targetMediaFolder 都是当前文件的媒体文件夹
-            const currentMediaFolder = window.appState.getCurrentMediaFolder();
-            const targetMediaFolder = currentMediaFolder; // 自动保存不涉及媒体文件夹迁移
+            // 自动保存不涉及媒体文件夹迁移
 
             const success = await window.fileManager.saveContent(filenameToSave, content, true, '.'); // isAuto = true
             
@@ -1046,39 +736,10 @@ tags:
 
     // 页面关闭时自动触发 clean_hexo
     function setupPageCloseHandler() {
-        // 监听页面关闭事件
-        window.addEventListener('beforeunload', async (event) => {
-            try {
-                // 使用 navigator.sendBeacon 发送异步请求，确保在页面关闭时能够执行
-                const data = JSON.stringify({ action: 'clean_hexo' });
-                const success = navigator.sendBeacon(`${window.BACKEND_URL}/clean_hexo`, data);
-                
-                if (success) {
-                    console.log('页面关闭时已触发 clean_hexo');
-                } else {
-                    // 如果 sendBeacon 失败，尝试同步请求
-                    const xhr = new XMLHttpRequest();
-                    xhr.open('POST', `${window.BACKEND_URL}/clean_hexo`, false); // 同步请求
-                    xhr.setRequestHeader('Content-Type', 'application/json');
-                    xhr.send(data);
-                    console.log('页面关闭时已触发 clean_hexo (fallback)');
-                }
-            } catch (error) {
-                console.error('页面关闭时触发 clean_hexo 失败:', error);
-            }
-        });
-
-        // 监听页面隐藏事件（移动端或标签页切换）
+        // 页面关闭 / 隐藏时静默触发 clean_hexo
+        window.addEventListener('beforeunload', () => API.cleanHexoBeacon());
         document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'hidden') {
-                try {
-                    const data = JSON.stringify({ action: 'clean_hexo' });
-                    navigator.sendBeacon(`${window.BACKEND_URL}/clean_hexo`, data);
-                    console.log('页面隐藏时已触发 clean_hexo');
-                } catch (error) {
-                    console.error('页面隐藏时触发 clean_hexo 失败:', error);
-                }
-            }
+            if (document.visibilityState === 'hidden') API.cleanHexoBeacon();
         });
     }
 

@@ -35,10 +35,10 @@ class FileManager {
     }
 
     /**
-     * 获取后端服务器地址 - 使用通用工具类
+     * 获取后端服务器地址 - 已弃用，改用 apiService
      */
     getBackendUrl() {
-        return CommonUtils.getBackendUrl();
+        return window.apiService ? '' : CommonUtils.getBackendUrl();
     }
 
     /**
@@ -62,23 +62,12 @@ class FileManager {
         }
 
         try {
-            const backendUrl = this.getBackendUrl();
-            const response = await fetch(`${backendUrl}${endpoint}`, {
+            const data = await window.apiService.custom(endpoint, {
                 method: 'POST',
                 body: formData
             });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            
-            if (!data.success) {
-                throw new Error(data.message || '上传失败');
-            }
-
-            // 添加一个3秒的延迟，以确保编辑器有足够的时间来加载新上传的文件
+            // 添加一个1秒的延迟，以确保编辑器有足够的时间来加载新上传的文件
             await new Promise(resolve => setTimeout(resolve, 1000));
 
             return data;
@@ -221,26 +210,11 @@ class FileManager {
      */
     async saveContent(filename, directory, content) {
         try {
-            const formData = new FormData();
-            formData.append('destination', directory);
-            formData.append('filename', filename);
-            formData.append('currentContent', content || '');
-
-            const backendUrl = this.getBackendUrl();
-            const response = await fetch(`${backendUrl}/save_md`, {
-                method: 'POST',
-                body: formData
+            const data = await window.apiService.saveMd({
+                destination: directory,
+                filename: filename,
+                currentContent: content || ''
             });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            
-            if (!data.success) {
-                throw new Error(data.message || '保存失败');
-            }
 
             console.log(`文件保存成功: ${filename}`);
             return data;
@@ -259,21 +233,7 @@ class FileManager {
             formData.append('folderName', folderName);
             formData.append('folderPath', parentPath);
 
-            const backendUrl = this.getBackendUrl();
-            const response = await fetch(`${backendUrl}/create_folder`, {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            
-            if (!data.success) {
-                throw new Error(data.message || '文件夹创建失败');
-            }
+            const data = await window.apiService.createFolder(formData);
 
             console.log(`文件夹创建成功: ${folderName}`);
             return data;
@@ -288,14 +248,7 @@ class FileManager {
      */
     async fetchDirectoryTree(directory) {
         try {
-            const backendUrl = this.getBackendUrl();
-            const response = await fetch(`${backendUrl}/directory-tree?directory=${encodeURIComponent(directory)}`);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-
-            const data = await response.json();
+            const data = await window.apiService.getDirectoryTree(directory);
             console.log(`获取目录树成功: ${directory}`);
             return data;
         } catch (error) {
@@ -315,21 +268,10 @@ class FileManager {
             formData.append('new_folderName', toFolder);
             formData.append('original_dir', originalDir);
 
-            const backendUrl = this.getBackendUrl();
-            const response = await fetch(`${backendUrl}/move_image`, {
+            const data = await window.apiService.custom('/move_image', {
                 method: 'POST',
                 body: formData
             });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            
-            if (!data.success) {
-                throw new Error(data.message || '图片移动失败');
-            }
 
             console.log(`图片移动成功: ${fileName} 从 ${fromFolder} 到 ${toFolder}`);
             return data;
@@ -350,15 +292,7 @@ class FileManager {
             formData.append('original_dir', originalDir);
             formData.append('markdownContent', markdownContent);
 
-            const backendUrl = this.getBackendUrl();
-            const response = await fetch(`${backendUrl}/tgz_download`, {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
+            const response = await window.apiService.tgzDownload(formData);
 
             // 导出成功后触发自动保存
             if (window.state && typeof window.autoSave === 'function') {

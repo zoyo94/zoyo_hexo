@@ -305,50 +305,47 @@ async function handleMdSelectChange() {
  * @returns {Promise<void>}
  */
 async function getContent(filename, forceContent = null) {
-    //console.log(forceContent)
-            if (forceContent !== null) {
-                // 为编辑器优化内容
-                const optimizedContent = optimizeContentForEditor(forceContent);
-                //console.log(optimizedContent)
-                setTimeout(() => {
-                    mdEditor.cm.setValue(optimizedContent);
-                    state.hasContentChanged = false;
-                }, 500);
+    if (forceContent !== null) {
+        // 为编辑器优化内容
+        const optimizedContent = optimizeContentForEditor(forceContent);
+        setTimeout(() => {
+            mdEditor.cm.setValue(optimizedContent);
+            state.hasContentChanged = false;
+        }, 500);
+        return;
+    }
+    
+    // 使用 apiService 获取内容
+    try {
+        const data = await window.apiService.getMd(filename);
+        let content = '';
+        
+        if (data.success) {
+            content = data.content;
+            if (content.trim() === '' || content.trim() === '\n') {
+                if (filename === 'cache') {
+                    content = `---\ntitle: ${filename}\ndate: ${moment().format('YYYY-MM-DD HH:mm:ss')}\ncategories:\n    - [Category / 分类]\ntags:\n    - Tag / 标签\n---`;
+                }
+            }
+        } else {
+            console.error(`获取文件失败: ${data.message}`);
+            if (filename === 'cache') {
+                content = `---\ntitle: ${filename}\ndate: ${moment().format('YYYY-MM-DD HH:mm:ss')}\ncategories:\n    - [Category / 分类]\ntags:\n    - Tag / 标签\n---`;
+            } else {
                 return;
             }
-            
-            // 调用原始函数获取内容
-            const xhr = new XMLHttpRequest();
-            xhr.open("GET", `${CONFIG.ORIGINAL_DIR}${filename}`, true);
-            xhr.onreadystatechange = function() {
-                if (xhr.readyState === 4) {
-                    let content = '';
-                    
-                    if (xhr.status === 200) {
-                        content = xhr.responseText;
-                        
-                        if (content.trim() === '' || content.trim() === '\n') {
-                            if (filename === 'cache') {
-                                content = `---\ntitle: ${filename}\ndate: ${moment().format('YYYY-MM-DD HH:mm:ss')}\ncategories:\n    - [Category / 分类]\ntags:\n    - Tag / 标签\n---`;
-                            }
-                        }
-                    } else if (xhr.status === 404) {
-                        if (filename === 'cache') {
-                            content = `---\ntitle: ${filename}\ndate: ${moment().format('YYYY-MM-DD HH:mm:ss')}\ncategories:\n    - [Category / 分类]\ntags:\n    - Tag / 标签\n---`;
-                        }
-                    }
-                    
-                    // 为编辑器优化内容
-                    const optimizedContent = optimizeContentForEditor(content);
-                    //console.log(optimizedContent)
-                    setTimeout(() => {
-                        mdEditor.cm.setValue(optimizedContent);
-                        state.hasContentChanged = false;
-                    }, 500);
-                }
-            };
-            xhr.send();
-        };
+        }
+        
+        const optimizedContent = optimizeContentForEditor(content);
+        setTimeout(() => {
+            mdEditor.cm.setValue(optimizedContent);
+            state.hasContentChanged = false;
+        }, 500);
+    } catch (error) {
+        console.error('请求文件内容失败:', error);
+    }
+};
+
 
 
 /**
@@ -357,36 +354,30 @@ async function getContent(filename, forceContent = null) {
  * @returns {Promise<string>} 文件内容
  */
 async function fetchFileContent(filename) {
-    return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open("GET", `${CONFIG.ORIGINAL_DIR}${filename}`, true);
-        xhr.onreadystatechange = function() {
-            if (xhr.readyState === 4) {
-                let content = '';
-                
-                if (xhr.status === 200) {
-                    // 文件存在，使用现有内容
-                    content = xhr.responseText;
-                    
-                    // 检查内容是否为空或只有空白字符
-                    if (content.trim() === '' || content.trim() === '\\n') {
-                        content = generateDefaultContent(filename);
-                    }
-                } else if (xhr.status === 404) {
-                    // 文件不存在，生成默认内容
-                    content = generateDefaultContent(filename);
-                } else {
-                    // 其他错误
-                    reject(new Error(`Failed to fetch file: ${xhr.status}`));
-                    return;
-                }
-                
-                resolve(content);
+    try {
+        const data = await window.apiService.getMd(filename);
+        let content = '';
+
+        if (data.success) {
+            content = data.content;
+            
+            // 检查内容是否为空或只有空白字符
+            if (content.trim() === '' || content.trim() === '\n') {
+                content = generateDefaultContent(filename);
             }
-        };
-        xhr.onerror = () => reject(new Error('Network error'));
-        xhr.send();
-    });
+        } else if (data.message && data.message.includes('不存在')) {
+            // 文件不存在，生成默认内容
+            content = generateDefaultContent(filename);
+        } else {
+            // 其他错误
+            throw new Error(`Failed to fetch file: ${data.message}`);
+        }
+        
+        return content;
+    } catch (error) {
+        console.error('Network error or fetch failed:', error);
+        throw error;
+    }
 }
 
 /**
@@ -526,7 +517,7 @@ async function handleManualSave() {
  */
 async function determineFileName(content) {
     let fileName = state.currentFilename;
-    const titleMatch = content.match(/^title:\\s*(.+)$/m);
+    const titleMatch = content.match(/^title:\s*(.+)$/m); // 修复转义错误：\\s+ -> \s+
     
     if (!fileName || fileName === 'cache') {
         if (titleMatch && titleMatch[1].trim()) {
@@ -708,10 +699,7 @@ async function sendExportRequest(params) {
     formData.append('original_dir', CONFIG.ORIGINAL_DIR);
     formData.append('markdownContent', params.markdownContent);
     
-    return fetch(`http://${CONFIG.HOST}:${CONFIG.PORTS.UPLOAD}/tgz_download`, {
-        method: 'POST',
-        body: formData
-    });
+    return window.apiService.tgzDownload(formData);
 }
 
 /**
@@ -1353,7 +1341,7 @@ async function handleDraggedMdFiles(mdFiles) {
 window.fetchDirectoryTree = async (directory, parentNode, fileType, errorMessage) => {
     while (parentNode.options.length > 1) parentNode.remove(1);
     try {
-        const data = await fetchJson(`http://${CONFIG.HOST}:${CONFIG.PORTS.UPLOAD}/directory-tree?directory=${directory}`);
+        const data = await window.apiService.getDirectoryTree(directory);
         buildOptions(data, parentNode, fileType);
     } catch (error) {
         console.error(error);

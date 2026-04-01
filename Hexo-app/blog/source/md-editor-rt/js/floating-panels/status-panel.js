@@ -304,10 +304,8 @@ export class StatusFloatingPanel {
             });
             
             this.createStatusDropdown('媒体文件夹选择', options, (selectedValue) => {
-                // 使用状态管理系统更新媒体文件夹
-                window.appState.currentMediaFolder = selectedValue;
-                window.fileManager.setDestination(selectedValue);
-                window.appState.onStateChange();
+                // 使用状态管理系统更新媒体文件夹，确保触发相应的事件和 UI 更新
+                window.appState.updateCurrentFile(window.appState.getCurrentFile(), selectedValue);
                 window.showMessage(`已选择媒体文件夹: ${selectedValue}`, 'success');
             });
         } catch (error) {

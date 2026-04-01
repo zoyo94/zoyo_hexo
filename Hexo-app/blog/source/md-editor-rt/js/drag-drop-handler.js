@@ -278,14 +278,6 @@ export class DragDropHandler {
         return files;
     }
 
-    async readFileContent(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => resolve(e.target.result);
-            reader.onerror = (e) => reject(new Error('文件读取失败'));
-            reader.readAsText(file, 'UTF-8');
-        });
-    }
 }
 
 // 导出到全局

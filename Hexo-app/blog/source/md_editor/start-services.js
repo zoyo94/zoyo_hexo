@@ -78,8 +78,8 @@ async function main() {
         console.log('\n🎉 MD Editor 服务启动完成！');
         console.log('\n📖 访问地址:');
         console.log(`   博客首页: http://localhost:4000`);
-        console.log(`   MD编辑器: http://localhost:4000/md_editor/index-optimized.html`);
-        console.log(`   或直接访问: http://localhost:3001/index-optimized.html`);
+        console.log(`   MD编辑器: http://localhost:4000/md_editor/index.html`);
+        console.log(`   或直接访问: http://localhost:3001/index.html`);
         
         console.log('\n⌨️  快捷键:');
         console.log('   Ctrl+S: 保存文件');
