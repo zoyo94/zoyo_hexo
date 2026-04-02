@@ -136,16 +136,16 @@ if (window.mdEditorRtAppInitialized) {
     };
 
     // 初始化管理器
-    window.fileManager = new FileManager(window.CONFIG); // 传入CONFIG
+    window.fileManager = new FileManager(window.CONFIG); 
     window.cacheManager = new CacheManager();
-
-    // 初始化状态管理系统
-    window.appState.updateCurrentFile('cache'); // 这会自动设置cache对应IMG文件夹
 
     // 初始化浮窗面板 (确保只初始化一次)
     window.simpleCacheUI = new SimpleCacheUI();
     window.operationsPanel = new OperationsFloatingPanel();
     window.statusPanel = new StatusFloatingPanel();
+
+    // 初始化状态管理系统 - 在面板初始化后设置初始文件为 cache
+    window.appState.updateCurrentFile('cache'); 
 
     // 辅助函数
     window.showMessage = (message, type = 'info') => {
@@ -700,19 +700,9 @@ if (window.mdEditorRtAppInitialized) {
         }
     }
 
-    // 监听编辑器内容变化
+    // 监听内容变化（RT 版已由 React 组件内部设置 window.state.hasContentChanged）
     function setupContentChangeListener() {
-        // 等待编辑器初始化完成
-        const checkEditor = () => {
-            if (window.mdEditor && window.mdEditor.on) {
-                window.mdEditor.on('change', () => {
-                    window.state.hasContentChanged = true;
-                });
-            } else {
-                setTimeout(checkEditor, 100);
-            }
-        };
-        checkEditor();
+        // 留空即可，React 组件会通过 onChange 更新 hasContentChanged
     }
 
     // 从localStorage恢复自动保存设置

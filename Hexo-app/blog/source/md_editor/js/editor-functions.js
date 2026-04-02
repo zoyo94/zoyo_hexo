@@ -1380,8 +1380,8 @@ window.buildOptions = (treeData, parentNode, fileType) => {
             if (child.type === fileType) {
                 // 根据下拉列表的 ID 应用特定规则
                 if (selectId === 'md-select') {
-                    // 对于 MD 文件下拉列表，只接受 .md 文件或 'cache' 文件
-                    if (child.name.endsWith('.md') || child.name === 'cache') {
+                    // 对于 MD 文件下拉列表，按 .md 后缀过滤，并排除内部缓存文件 cache
+                    if (child.name.endsWith('.md') && child.name !== 'cache') {
                         shouldAddItem = true;
                     }
                 } else {

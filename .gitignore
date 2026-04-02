@@ -13,7 +13,8 @@ node_modules/
 .DS_Store
 
 # Hexo
-public/
+Hexo-app/blog/public/*
+!Hexo-app/blog/public/.gitkeep
 db.json
 .sass-cache/
 

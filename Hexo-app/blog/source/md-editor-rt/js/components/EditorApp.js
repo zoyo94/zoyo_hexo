@@ -24,7 +24,8 @@ function buildDefaultTemplate() {
 
 // ─── 主组件 ──────────────────────────────────────────────
 export function App() {
-    const [text, setText] = React.useState('');
+    // ── 状态初始化 ──
+    const [text, setText] = React.useState(buildDefaultTemplate());
     const [previewTheme, setPreviewTheme] = React.useState('default');
 
     // 保持对最新文本的 ref（供事件监听器同步读取，避免闭包过期）
@@ -36,14 +37,22 @@ export function App() {
         let cancelled = false;
         const load = async () => {
             const filename = window.state?.currentFilename ?? 'cache';
+            // 初始加载仅针对 cache 文件，其他文件通过事件总线处理
             if (filename !== 'cache') return;
 
             const filePath = `${window.CONFIG?.ORIGINAL_DIR ?? '.'}/${filename}`;
             try {
                 const content = await window.fileManager?.fetchFileContent(filePath);
-                if (!cancelled) setText(content || buildDefaultTemplate());
+                if (!cancelled) {
+                    // 只有当获取到的内容非空时才覆盖默认生成的模板
+                    if (content && content.trim() !== '') {
+                        setText(content);
+                    } else {
+                        setText(buildDefaultTemplate());
+                    }
+                }
             } catch (err) {
-                console.error('[App] 初始化加载失败:', err);
+                console.warn('[App] 远程 cache 加载失败或不存在，使用构建模板:', err);
                 if (!cancelled) setText(buildDefaultTemplate());
             }
         };
